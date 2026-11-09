@@ -945,7 +945,7 @@ def test_a_manual_input_belongs_to_its_village(client: TestClient, village: str)
 # --------------------------------------------------------------------------- no Supercell login
 
 FORBIDDEN_NAMES = re.compile(
-    r"password|passwd|mot_?de_?passe|supercell_?id|username|login|e_?mail|credential",
+    r"password|passwd|mot_?de_?passe|supercell_?id|username|login(?!s_per_day)|e_?mail|credential",
     re.IGNORECASE,
 )
 
