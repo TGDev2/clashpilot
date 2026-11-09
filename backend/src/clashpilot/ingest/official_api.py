@@ -23,6 +23,13 @@ SECTIONS = {
     "spells": "spells",
     "heroEquipment": "equipment",
 }
+# API section -> the kinds of pack items it lists (siege machines and pets come with the troops).
+KINDS = {
+    "troops": frozenset({"troop", "siege", "pet"}),
+    "heroes": frozenset({"hero"}),
+    "spells": frozenset({"spell"}),
+    "heroEquipment": frozenset({"equipment"}),
+}
 TIMEOUT_S = 10.0
 
 
@@ -119,10 +126,15 @@ def match_levels(
     compared: a name the pack does not know, or an item absent from the export. Entries of the
     builder base are ignored.
     """
-    ids_by_name: dict[str, int] = {}
+    # Names are matched among the home-village items of the kinds the API section lists.
+    ids_by_name: dict[tuple[str, str], int] = {}
     if pack is not None:
         for known in pack.data.items:
-            ids_by_name.setdefault(known.name, known.data_id)
+            if known.village != "home":
+                continue
+            for api_section, kinds in KINDS.items():
+                if known.kind in kinds:
+                    ids_by_name.setdefault((api_section, known.name), known.data_id)
     exported: dict[int, int] = {}
     for item in snapshot.items:
         if item.level is not None:
@@ -144,7 +156,7 @@ def match_levels(
                 if isinstance(raw_level, int) and not isinstance(raw_level, bool)
                 else None
             )
-            data_id = ids_by_name.get(name)
+            data_id = ids_by_name.get((api_section, name))
             if data_id is None or level is None:
                 reason = "unknown_name" if data_id is None else "invalid_level"
                 conflicts.append(ApiConflict(name, section, level, reason))

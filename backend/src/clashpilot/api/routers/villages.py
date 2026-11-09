@@ -334,6 +334,7 @@ class UpgradedOut(BaseModel):
     name: str | None
     from_level: int
     to_level: int
+    count: int
 
 
 class PresenceOut(BaseModel):
@@ -428,6 +429,7 @@ def get_diff(
                 name=name_of(u.data_id),
                 from_level=u.from_level,
                 to_level=u.to_level,
+                count=u.count,
             )
             for u in result.upgraded
         ],
