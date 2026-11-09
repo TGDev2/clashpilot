@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from clashpilot.api.errors import error_detail, register_error_handlers
+from clashpilot.api.routers import gamedata
 from clashpilot.settings import Settings
 
 Clock = Callable[[], int]
@@ -64,6 +65,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
     @app.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "app": "ClashPilot", "version": app.version}
+
+    app.include_router(gamedata.router)
 
     # Future routers are included above this line; the SPA fallback stays last.
     _register_spa(app, settings)
