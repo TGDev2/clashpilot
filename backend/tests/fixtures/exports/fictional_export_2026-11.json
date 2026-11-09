@@ -1,0 +1,48 @@
+{
+  "tag": "#FICTIF2026",
+  "timestamp": 1794133192,
+  "helpers": [
+    {"data": 93000000, "lvl": 4, "helper_cooldown": 72462}
+  ],
+  "buildings": [
+    {"data": 9000001, "lvl": 2, "weapon": 1},
+    {"data": 9000002, "lvl": 1, "cnt": 3},
+    {"data": 9000003, "lvl": 1, "timer": 37745},
+    {"data": 9000004, "lvl": 2, "gear_up": 1},
+    {"data": 9000004, "lvl": 3, "timer": 0},
+    {"data": 9000005, "lvl": 1, "timer": 82379, "extra": true, "helper_recurrent": true},
+    {"data": 1000010, "lvl": 8, "cnt": 225},
+    {"data": 1000097, "types": [{"data": 103000011, "modules": [{"data": 102000033, "lvl": 4}]}]}
+  ],
+  "traps": [],
+  "decos": [],
+  "obstacles": [],
+  "units": [
+    {"data": 9000007, "lvl": 1}
+  ],
+  "siege_machines": [],
+  "heroes": [
+    {"data": 9000006, "lvl": 1, "timer": 164724}
+  ],
+  "spells": [],
+  "pets": [],
+  "equipment": [],
+  "house_parts": [],
+  "skins": [],
+  "sceneries": [],
+  "buildings2": [
+    {"data": 1000033, "lvl": 3}
+  ],
+  "traps2": [],
+  "decos2": [],
+  "obstacles2": [],
+  "units2": [
+    {"data": 4000031, "lvl": 2}
+  ],
+  "heroes2": [
+    {"data": 28000005, "lvl": 5}
+  ],
+  "skins2": [],
+  "sceneries2": [],
+  "boosts": {"clocktower_cooldown": 73124}
+}

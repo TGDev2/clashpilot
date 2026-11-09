@@ -1,0 +1,13 @@
+{
+  "id": "test-keep",
+  "dataId": 1000001,
+  "name": "Tour centrale de test",
+  "base": "home",
+  "category": "town-hall",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "levels": [
+    {"level": 1, "buildCost": 110, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 0, "minutes": 0, "seconds": 20}, "storageCapacity": {"gold": 1100, "elixir": 1100, "darkElixir": 0}, "images": {"normal": "https://example.invalid/test-keep-1.png"}},
+    {"level": 2, "buildCost": 1200, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 0, "minutes": 11, "seconds": 0}, "storageCapacity": {"gold": 2200, "elixir": 2200, "darkElixir": 0}, "images": {"normal": "https://example.invalid/test-keep-2.png"}},
+    {"level": 3, "buildCost": 5300, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 1, "minutes": 7, "seconds": 0}, "storageCapacity": {"gold": 3300, "elixir": 3300, "darkElixir": 330}, "images": {"normal": "https://example.invalid/test-keep-3.png"}}
+  ]
+}

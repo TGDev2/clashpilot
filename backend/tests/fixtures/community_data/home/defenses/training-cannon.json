@@ -1,0 +1,18 @@
+{
+  "id": "training-cannon",
+  "dataId": 1900008,
+  "name": "Canon de test",
+  "base": "home",
+  "category": "defense",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerTownHall": [
+    {"townHallLevel": 1, "count": 0},
+    {"townHallLevel": 2, "count": 1},
+    {"townHallLevel": 3, "count": 2}
+  ],
+  "levels": [
+    {"level": 1, "buildCost": 57, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 0, "minutes": 0, "seconds": 31}, "townHallRequired": 2, "images": {"normal": "https://example.invalid/training-cannon-1.png"}},
+    {"level": 2, "buildCost": 413, "buildCostResource": "Gold", "buildTime": {"days": 1, "hours": 2, "minutes": 3, "seconds": 4}, "townHallRequired": 2, "images": {"normal": "https://example.invalid/training-cannon-2.png"}},
+    {"level": 3, "buildCost": 919, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 3, "minutes": 0, "seconds": 0}, "townHallRequired": 3, "images": {"normal": "https://example.invalid/training-cannon-3.png"}}
+  ]
+}

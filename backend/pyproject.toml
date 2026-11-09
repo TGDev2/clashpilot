@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clashpilot"
+version = "0.1.0"
+description = "Local upgrade planner for Clash of Clans"
+requires-python = ">=3.13,<3.14"
+license = "MIT"
+dependencies = [
+    "ortools==9.15.6755",
+    "fastapi==0.162.2",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+    "tzdata==2026.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.2.0",
+    "pytest-timeout==2.4.0",
+    "pytest-xdist==3.8.0",
+    "hypothesis==6.170.15",
+    "ruff==0.17.4",
+    "mypy==2.4.1",
+]
+
+[tool.setuptools]
+py-modules = ["clashpilot_pytest"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 20
+addopts = "-p clashpilot_pytest"
+markers = [
+    "slow: benchmark-sized test, excluded from verify and run by test:slow",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+mypy_path = "src"

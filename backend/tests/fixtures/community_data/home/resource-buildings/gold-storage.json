@@ -1,0 +1,12 @@
+{
+  "id": "gold-storage",
+  "dataId": 1900005,
+  "name": "Coffre de test",
+  "base": "home",
+  "category": "resource",
+  "availablePerTownHall": [{"townHallLevel": 1, "count": 1}, {"townHallLevel": 2, "count": 2}],
+  "levels": [
+    {"level": 1, "capacity": 1517, "buildCost": 153, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 1, "seconds": 10}, "townHallRequired": 1},
+    {"level": 2, "capacity": 5023, "buildCost": 917, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 12, "seconds": 0}, "townHallRequired": 2}
+  ]
+}

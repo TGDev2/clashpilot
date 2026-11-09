@@ -1,0 +1,12 @@
+{
+  "id": "hero-hall",
+  "dataId": 1900071,
+  "name": "Salle des champions de test",
+  "base": "home",
+  "category": "army",
+  "availablePerTownHall": [{"townHallLevel": 2, "count": 1}],
+  "levels": [
+    {"level": 1, "buildCost": 610, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 9, "seconds": 0}, "townHallRequired": 2},
+    {"level": 2, "buildCost": 1610, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 44, "seconds": 0}, "townHallRequired": 3}
+  ]
+}

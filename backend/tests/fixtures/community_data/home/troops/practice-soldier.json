@@ -1,0 +1,11 @@
+{
+  "id": "practice-soldier",
+  "dataId": 1900026,
+  "name": "Soldat de test",
+  "base": "home",
+  "category": "troop",
+  "levels": [
+    {"level": 1, "townHallRequired": 1, "laboratoryRequired": 1, "researchCost": 23, "researchCostResource": "Elixir", "researchTime": {"days": 0, "hours": 0, "minutes": 5, "seconds": 0}},
+    {"level": 2, "townHallRequired": 2, "laboratoryRequired": 3, "researchCost": 227, "researchCostResource": "Elixir", "researchTime": {"days": 0, "hours": 1, "minutes": 0, "seconds": 0}}
+  ]
+}

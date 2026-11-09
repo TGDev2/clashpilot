@@ -1,0 +1,11 @@
+{
+  "id": "builders-hut",
+  "dataId": 1900015,
+  "name": "Hutte de test",
+  "base": "home",
+  "category": "defense",
+  "availablePerTownHall": [{"townHallLevel": 1, "count": 1}],
+  "levels": [
+    {"level": 1, "buildCost": 13, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 0, "minutes": 1, "seconds": 0}, "townHallRequired": 1}
+  ]
+}

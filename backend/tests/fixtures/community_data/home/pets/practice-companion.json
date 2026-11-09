@@ -1,0 +1,10 @@
+{
+  "id": "practice-companion",
+  "dataId": 1900101,
+  "name": "Compagnon de test",
+  "base": "home",
+  "category": "pet",
+  "levels": [
+    {"level": 1, "petHouseLevelRequired": 1, "upgradeCost": 401, "upgradeCostResource": "Dark Elixir", "upgradeTime": {"days": 0, "hours": 2, "minutes": 0, "seconds": 0}}
+  ]
+}
