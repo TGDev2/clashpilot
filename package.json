@@ -1,0 +1,19 @@
+{
+  "name": "clashpilot",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test:slow": "node scripts/test-slow.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "verify:full": "npm run verify && npm run test:slow && npm run e2e",
+    "dev": "node scripts/run-with-settings.mjs --with-vite uvicorn clashpilot.api.app:create_app --factory --reload",
+    "start": "npm run build --prefix frontend && node scripts/run-with-settings.mjs uvicorn clashpilot.api.app:create_app --factory"
+  }
+}
