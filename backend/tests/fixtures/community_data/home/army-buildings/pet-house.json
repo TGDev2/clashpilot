@@ -1,0 +1,11 @@
+{
+  "id": "pet-house",
+  "dataId": 1900073,
+  "name": "Abri de test",
+  "base": "home",
+  "category": "army",
+  "availablePerTownHall": [{"townHallLevel": 3, "count": 1}],
+  "levels": [
+    {"level": 1, "buildCost": 810, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 6, "seconds": 0}, "townHallRequired": 3}
+  ]
+}

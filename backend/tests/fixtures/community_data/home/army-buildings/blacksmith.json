@@ -1,0 +1,12 @@
+{
+  "id": "blacksmith",
+  "dataId": 1900072,
+  "name": "Forge de test",
+  "base": "home",
+  "category": "army",
+  "availablePerTownHall": [{"townHallLevel": 2, "count": 1}],
+  "levels": [
+    {"level": 1, "buildCost": 710, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 8, "seconds": 0}, "townHallRequired": 2},
+    {"level": 2, "buildCost": 1710, "buildCostResource": "Elixir", "buildTime": {"days": 0, "hours": 0, "minutes": 33, "seconds": 0}, "townHallRequired": 3}
+  ]
+}

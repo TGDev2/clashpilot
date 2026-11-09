@@ -1,0 +1,11 @@
+{
+  "id": "practice-boots",
+  "dataId": 1900091,
+  "name": "Bottes de test",
+  "base": "home",
+  "category": "hero-equipment",
+  "levels": [
+    {"level": 2, "upgradeShinyOre": 101, "upgradeGlowingOre": 0, "blacksmithLevelRequired": 1},
+    {"level": 3, "upgradeShinyOre": 203, "upgradeGlowingOre": 37, "upgradeStarryOre": 5, "blacksmithLevelRequired": 2}
+  ]
+}

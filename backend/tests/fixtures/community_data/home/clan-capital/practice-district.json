@@ -1,0 +1,9 @@
+{
+  "id": "practice-district",
+  "dataId": 8000002,
+  "name": "Quartier de test",
+  "base": "home",
+  "levels": [
+    {"level": 1, "buildCost": 9, "buildCostResource": "Gold", "buildTime": {"days": 0, "hours": 0, "minutes": 1, "seconds": 0}, "townHallRequired": 1}
+  ]
+}

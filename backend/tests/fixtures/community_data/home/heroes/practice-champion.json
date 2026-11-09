@@ -1,0 +1,11 @@
+{
+  "id": "practice-champion",
+  "dataId": 1900081,
+  "name": "Champion de test",
+  "base": "home",
+  "category": "hero",
+  "levels": [
+    {"level": 1, "heroHallLevelRequired": 1, "upgradeCost": 311, "upgradeCostResource": "Dark Elixir", "upgradeTime": {"days": 0, "hours": 0, "minutes": 30, "seconds": 0}},
+    {"level": 2, "heroHallLevelRequired": 2, "upgradeCost": 1213, "upgradeCostResource": "Dark Elixir", "upgradeTime": {"days": 0, "hours": 4, "minutes": 0, "seconds": 0}}
+  ]
+}
