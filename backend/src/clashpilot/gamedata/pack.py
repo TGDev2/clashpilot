@@ -17,6 +17,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 SCHEMA_VERSION = 1
 INSTANT_UPGRADE_TAG = "instant_upgrade"
+COST_RESOURCES = frozenset(
+    {"gold", "elixir", "dark_elixir", "gems", "shiny_ore", "glowy_ore", "starry_ore"}
+)
 
 Lane = Literal["builder", "lab", "pet_house", "blacksmith", "none"]
 Kind = Literal[
