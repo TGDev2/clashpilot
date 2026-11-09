@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, get_args
+
+from pydantic import BaseModel, ConfigDict, Field
 
 Village = Literal["home", "builder"]
 
@@ -52,6 +54,48 @@ class VillageSnapshot:
     format_version: str = ""
 
 
-@dataclass(frozen=True)
-class ManualState:
-    """What the export does not give and the player types in: filled by manual input."""
+Resource = Literal["gold", "elixir", "dark_elixir", "gems", "shiny_ore", "glowy_ore", "starry_ore"]
+RESOURCES: tuple[Resource, ...] = get_args(Resource)
+
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+
+class ManualResource(_Strict):
+    """A typed-in stock. Never `unknown`: an absent entry is what means unknown."""
+
+    value: int = Field(ge=0)
+    status: Literal["confirmed", "estimated"]
+    as_of: int
+
+
+class FarmRate(_Strict):
+    """Income per hour, in three scenarios."""
+
+    low: int = Field(ge=0)
+    expected: int = Field(ge=0)
+    high: int = Field(ge=0)
+
+
+class ManualEvent(_Strict):
+    """A bonus or reduction active on one lane between `start` and `end` (100 = no effect)."""
+
+    label: str
+    start: int
+    end: int
+    lane: str
+    duration_pct: int = Field(ge=0)
+    cost_pct: int = Field(ge=0)
+
+
+class ManualState(_Strict):
+    """What neither the export nor the official API give and the player types in."""
+
+    resources: dict[Resource, ManualResource] = Field(default_factory=dict)
+    builders_total: int | None = Field(default=None, ge=0)
+    magic_items: dict[str, int] = Field(default_factory=dict)
+    gold_pass: dict[str, Any] = Field(default_factory=dict)
+    farm_rate: dict[Resource, FarmRate] = Field(default_factory=dict)
+    storage_override: dict[Resource, int] = Field(default_factory=dict)
+    events: list[ManualEvent] = Field(default_factory=list)

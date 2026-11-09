@@ -7,6 +7,7 @@ from collections.abc import Callable
 from importlib.metadata import version as package_version
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
@@ -55,11 +56,17 @@ def _register_spa(app: FastAPI, settings: Settings) -> None:
         return FileResponse(target)
 
 
-def create_app(settings: Settings | None = None, clock: Clock | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    clock: Clock | None = None,
+    coc_transport: httpx.BaseTransport | None = None,
+) -> FastAPI:
     settings = settings if settings is not None else Settings.from_env()
     app = FastAPI(title="ClashPilot", version=package_version("clashpilot"))
     app.state.settings = settings
     app.state.clock = clock if clock is not None else _default_clock
+    # Test seam: an httpx transport standing in for the network of the official API client.
+    app.state.coc_transport = coc_transport
     register_error_handlers(app)
 
     @app.get("/api/health")
