@@ -13,16 +13,8 @@ from clashpilot.planning.model import ResourceModel as Resources
 from clashpilot.planning.objective import Objective
 from clashpilot.planning.registry import PLANNERS
 from clashpilot.planning.simulate import simulate
-from support.problems import (
-    DAY,
-    HOUR,
-    NOW,
-    TEST_CONFIG,
-    generate_problem,
-    make_calendar,
-    make_problem,
-    make_task,
-)
+from support.instances import generate_problem
+from support.problems import DAY, HOUR, NOW, TEST_CONFIG, make_calendar, make_problem, make_task
 
 
 def solve(engine: str, problem: Any, objective: Objective | None = None) -> Any:

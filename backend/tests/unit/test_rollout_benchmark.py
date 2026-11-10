@@ -14,7 +14,8 @@ import pytest
 from clashpilot.planning.objective import Objective
 from clashpilot.planning.registry import PLANNERS
 from clashpilot.planning.simulate import simulate
-from support.problems import TEST_CONFIG, generate_problem
+from support.instances import generate_problem
+from support.problems import TEST_CONFIG
 
 BENCHMARK_CONFIG = TEST_CONFIG
 
