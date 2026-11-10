@@ -1,0 +1,7 @@
+# Lint settings of the acceptance tests: the project settings, plus what a frozen file needs.
+# Acceptance files are frozen at their exam commit and never edited afterwards, so their import
+# layout is kept as committed instead of being rewritten by the import sorter.
+extend = "../../pyproject.toml"
+
+[lint.per-file-ignores]
+"test_rollout_planner_acceptance.py" = ["I001"]
