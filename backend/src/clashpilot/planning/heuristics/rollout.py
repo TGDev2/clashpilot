@@ -12,6 +12,10 @@ tasks by ratio are scored, K being the remaining budget spread over the pending 
 budget is spent, the base policy finishes the plan without further decisions. Every scored
 candidate is recorded in the trace, and `chosen` is the best score, ties broken by task id, the
 wait candidate last. All sorts are stable: two identical runs give the same plan and trace.
+
+`replay_trace` rebuilds a trace for a plan another engine produced (E10): one decision per distinct
+start instant of the plan, the first `MAX_REPLAY_DECISIONS` at most, whose `chosen` is the plan's
+own assignment at that instant, scored like any candidate, next to the other ready tasks.
 """
 
 from __future__ import annotations
@@ -31,6 +35,7 @@ from clashpilot.planning.registry import PlannerConfig
 from clashpilot.planning.simulate import simulate
 
 ENGINE = "rollout"
+MAX_REPLAY_DECISIONS = 20
 _EMPTY_PROOF = Proof(kind="heuristic", objective=0.0)
 
 
@@ -132,3 +137,52 @@ class _Run:
         return Candidate(
             task_id=candidate.task_id, start=candidate.start, score=self.evaluate(candidate)
         )
+
+
+def replay_trace(
+    problem: Problem, objective: Objective, config: PlannerConfig, plan: Plan
+) -> tuple[Decision, ...]:
+    """The trace of `plan` as if it had been decided start by start (SPEC section 4, Trace).
+
+    At each of the first `MAX_REPLAY_DECISIONS` distinct start instants, the plan's own task (the
+    first by id when several start together) is scored by completing it with the base policy, next
+    to at most `config.max_rollouts // MAX_REPLAY_DECISIONS` other ready tasks; `chosen` is the
+    plan's task whatever the scores. The state then follows the plan, never the policy.
+    """
+    tasks = {task.id: task for task in problem.tasks}
+    run = _Run(problem, objective, config, None)
+    state = run.state
+    pending = {task.id for task in state.pending}
+    by_start: dict[int, list[Task]] = {}
+    for assignment in sorted(plan.assignments, key=lambda a: (a.start, a.task_id)):
+        if assignment.task_id in pending and assignment.start >= problem.now:
+            by_start.setdefault(assignment.start, []).append(tasks[assignment.task_id])
+    others_limit = max(0, config.max_rollouts // MAX_REPLAY_DECISIONS - 1)
+    decisions: list[Decision] = []
+    for at in sorted(by_start):
+        group = by_start[at]
+        if len(decisions) < MAX_REPLAY_DECISIONS:
+            state.advance(at)
+            chosen_task = group[0]
+            ready = (
+                [
+                    t
+                    for t in state.ready(at)
+                    if t.id != chosen_task.id and state.start_allowed(t, at)
+                ]
+                if problem.calendar.can_act(at)
+                else []
+            )
+            candidates = [
+                run.scored(Candidate(task_id=t.id, start=at, score=0.0))
+                for t in (chosen_task, *ready[:others_limit])
+                if state.free_slot(t.lane, at) is not None and state.prerequisites_done(t, at)
+            ]
+            if candidates and candidates[0].task_id == chosen_task.id:
+                decisions.append(
+                    Decision(at=at, candidates=tuple(candidates), chosen=candidates[0])
+                )
+        for task in group:
+            if task in state.pending and state.free_slot(task.lane, at) is not None:
+                state.start(task, at)
+    return tuple(decisions)
