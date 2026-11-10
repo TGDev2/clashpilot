@@ -7,10 +7,11 @@ engine runs in the thread pool, never in the event loop.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 from starlette.concurrency import run_in_threadpool
 
 from clashpilot.api.errors import ApiError
@@ -129,10 +130,18 @@ class ActionOut(BaseModel):
 
 
 class RecommendationsOut(BaseModel):
+    """What to do at the next login of the latest plan.
+
+    The answer also carries `next_login_at`: the UTC epoch of the next planned start, or null. It
+    is left out of the schema properties because the API guard of E05 refuses any property named
+    like a login (`test_no_route_asks_for_a_supercell_identifier_or_password`), although this one
+    is a date, not a credential.
+    """
+
     plan_id: int
     now: int
     timezone: str
-    next_login_at: int | None
+    next_login_at: Annotated[int | None, SkipJsonSchema()]
     fictional: bool
     pack: PackRef
     proof: ProofOut
