@@ -29,6 +29,9 @@ class Settings:
         """Build settings from CLASHPILOT_* variables, falling back to defaults."""
         source = os.environ if env is None else env
         defaults = cls()
+        overrides: dict[str, Any] = {}
+        if source.get("CLASHPILOT_SOLVER_MAX_TIME_S"):
+            overrides["solver_max_time_s"] = float(source["CLASHPILOT_SOLVER_MAX_TIME_S"])
         return cls(
             data_dir=Path(source.get("CLASHPILOT_DATA_DIR", str(defaults.data_dir))),
             coc_token=source.get("CLASHPILOT_COC_TOKEN") or None,
@@ -36,4 +39,5 @@ class Settings:
             host=source.get("CLASHPILOT_HOST", defaults.host),
             port=int(source.get("CLASHPILOT_PORT", str(defaults.port))),
             frontend_dist=Path(source.get("CLASHPILOT_FRONTEND_DIST", str(defaults.frontend_dist))),
+            planner_overrides=overrides,
         )
