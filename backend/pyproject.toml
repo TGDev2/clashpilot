@@ -39,6 +39,8 @@ where = ["src"]
 testpaths = ["tests"]
 timeout = 20
 addopts = "-p clashpilot_pytest"
+# Lets the test files import the shared helpers of `tests/support` as `support`.
+pythonpath = ["tests"]
 markers = [
     "slow: benchmark-sized test, excluded from verify and run by test:slow",
 ]
