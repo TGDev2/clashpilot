@@ -1,8 +1,11 @@
 import { api, type PlanOut, type SchedulePreview, settle } from "./client";
 import { type ApiResource, useApi } from "./useApi";
 
-/** The latest plan of the village (404 `no_plan` when none was computed). */
-export function useLatestPlan(villageId: string | null): ApiResource<PlanOut> {
+/**
+ * The latest plan of the village (404 `no_plan` when none was computed). It is read again when
+ * `refreshKey` changes.
+ */
+export function useLatestPlan(villageId: string | null, refreshKey = ""): ApiResource<PlanOut> {
   return useApi<PlanOut>(
     () =>
       settle(() =>
@@ -10,7 +13,7 @@ export function useLatestPlan(villageId: string | null): ApiResource<PlanOut> {
           params: { path: { village_id: villageId ?? "" } },
         }),
       ),
-    villageId,
+    villageId === null ? null : `${villageId}:${refreshKey}`,
   );
 }
 

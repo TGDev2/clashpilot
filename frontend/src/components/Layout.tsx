@@ -1,6 +1,7 @@
 import { Link } from "react-aria-components";
 import { Outlet, useLocation } from "react-router";
 import { fr } from "../i18n/fr";
+import { ReminderAnnouncer } from "./ReminderAnnouncer";
 
 const LINKS = [
   { to: "/", label: fr.nav.dashboard },
@@ -51,6 +52,7 @@ export function Layout() {
           </ul>
         </nav>
       </header>
+      <ReminderAnnouncer />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
         <Outlet />
       </main>

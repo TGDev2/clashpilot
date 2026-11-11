@@ -19,6 +19,7 @@ import {
 } from "../components/ui";
 import { fr } from "../i18n/fr";
 import { useVillage } from "../state/village";
+import { NotificationsPanel } from "./settings/NotificationsPanel";
 
 type Kind = WeeklyWindow["kind"];
 type Mode = ScheduleProfile["policy"]["mode"];
@@ -477,6 +478,7 @@ export function Settings() {
             </p>
           </div>
         </form>
+        <NotificationsPanel />
       </div>
     </>
   );

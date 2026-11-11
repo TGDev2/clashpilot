@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
 import { defineConfig, type Plugin } from "vitest/config";
 
 // In development the SPA runs on Vite and forwards /api to the FastAPI backend.
@@ -23,8 +24,47 @@ const plainImportMetaUrl: Plugin = {
   },
 };
 
+/**
+ * The installable app (generateSW). The service worker only keeps the built files: it never
+ * answers `/api`, neither from a navigation fallback nor from a runtime cache. It needs a secure
+ * context (localhost, or HTTPS on a phone); elsewhere the app stays a plain web page.
+ */
+export const pwaOptions: Partial<VitePWAOptions> = {
+  strategies: "generateSW",
+  registerType: "autoUpdate",
+  manifestFilename: "manifest.webmanifest",
+  includeAssets: ["icons/apple-touch-icon.png"],
+  manifest: {
+    name: "ClashPilot",
+    short_name: "ClashPilot",
+    description: "Planificateur local d'améliorations",
+    lang: "fr",
+    display: "standalone",
+    start_url: "/",
+    scope: "/",
+    theme_color: "#0a1114",
+    background_color: "#0a1114",
+    icons: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      {
+        src: "/icons/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+    ],
+  },
+  workbox: {
+    globPatterns: ["**/*.{js,css,html,png}"],
+    navigateFallback: "index.html",
+    navigateFallbackDenylist: [/^\/api(\/|$)/],
+    cleanupOutdatedCaches: true,
+  },
+};
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), plainImportMetaUrl],
+  plugins: [react(), tailwindcss(), VitePWA(pwaOptions), plainImportMetaUrl],
   server: {
     proxy: {
       "/api": { target: apiOrigin, changeOrigin: true },

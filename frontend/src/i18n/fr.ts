@@ -420,6 +420,35 @@ export const fr = {
     saving: "Enregistrement…",
     saved: "Horaire enregistré.",
     fixErrors: "Corrigez les champs signalés avant d'enregistrer.",
+    notifications: {
+      title: "Notifications",
+      onlyWhenOpen:
+        "Les rappels ne fonctionnent que lorsque l'application est ouverte dans le navigateur : aucune notification n'arrive en arrière-plan.",
+      installHint:
+        "L'installation sur le téléphone exige HTTPS ; sur une adresse http://192.168.x.x l'application reste une page web ouverte dans le navigateur.",
+      enable: "Activer les rappels",
+      lead: "Délai avant la fin (minutes)",
+      kinds: "Types d'événements",
+      permission: {
+        granted: "Les rappels apparaissent comme notifications du système.",
+        denied: "Notifications du système refusées : les rappels s'affichent dans l'application.",
+        default: "Le navigateur demandera l'autorisation d'envoyer des notifications du système.",
+        unavailable:
+          "Notifications du système indisponibles : les rappels s'affichent dans l'application.",
+      },
+      export: "Exporter vers mon agenda (.ics)",
+      exportHint:
+        "Le fichier ajoute chaque fin d'amélioration du plan à votre agenda, avec une alarme avant la fin.",
+    },
+  },
+  reminders: {
+    heading: "Rappels",
+    dismiss: "Fermer",
+    title: "ClashPilot : fin d'amélioration",
+    message: (name: string, minutes: number) =>
+      minutes <= 0
+        ? `${name} se termine maintenant.`
+        : `${name} se termine dans ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
   },
   plan: {
     none: "Aucun plan calculé pour l'instant. Calculez-le depuis la page",
