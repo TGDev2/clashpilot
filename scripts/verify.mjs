@@ -10,6 +10,9 @@ const LANE_TIMEOUT_MS = 180_000;
 // existed. Neither they nor the lint settings frozen with them may change, so the exception
 // lives here, one file and one rule each.
 const FROZEN_IMPORT_LAYOUTS = ['tests/acceptance/test_cpsat_planner_acceptance.py:I001'];
+// Frozen form tests type about 100 keys (user-event: ~25 ms a key in jsdom), so under four parallel
+// lanes they overrun Vitest's 5 s default. Set here, not in vite.config.ts, which drives the frozen tests.
+const FRONTEND_TEST_TIMEOUT_MS = 20_000;
 
 function killTree(child) {
   if (process.platform === 'win32') {
@@ -92,7 +95,7 @@ function projectLanes() {
     {
       name: 'frontend',
       command:
-        'npm run lint && npm run typecheck && npm run test && npm run build && node ../scripts/gen-api.mjs --check',
+        `npm run lint && npm run typecheck && npm run test -- --testTimeout=${FRONTEND_TEST_TIMEOUT_MS} && npm run build && node ../scripts/gen-api.mjs --check`,
       cwd: FRONTEND,
     },
   ];
