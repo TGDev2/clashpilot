@@ -1,11 +1,14 @@
-"""Plan routes: compute a plan, read the latest one and explain what to do now (SPEC ADR-4).
+"""Plan routes: compute a plan, read the latest one and explain what to do now (SPEC ADR-4);
+replan after an event and read the journal (E11).
 
 Dates are UTC epochs; `timezone` is the IANA key of the schedule profile, for display only. The
-engine runs in the thread pool, never in the event loop.
+engine runs in the thread pool, never in the event loop. A plan is `stale` once an export newer
+than the one it was computed on is imported; the event `snapshot_imported` replans on it.
 """
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -16,8 +19,10 @@ from starlette.concurrency import run_in_threadpool
 
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.gamedata import ErrorBody
+from clashpilot.ingest.state import Resource
 from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.messages import WAIT_NAME, entry
+from clashpilot.planning.replan import Event, PreviousPlan, ReplanError, replan
 from clashpilot.planning.service import (
     InvalidPlanError,
     PlanInputs,
@@ -25,6 +30,7 @@ from clashpilot.planning.service import (
     create_plan,
     resolve_params,
 )
+from clashpilot.storage import journal as journal_store
 from clashpilot.storage import plans as store
 from clashpilot.storage.db import open_db
 
@@ -89,6 +95,7 @@ class PlanOut(BaseModel):
     assignments: list[AssignmentOut]
     excluded: list[ExcludedOut]
     warnings: list[str]
+    stale: bool = False
 
 
 class Explained(BaseModel):
@@ -157,6 +164,146 @@ def _village_not_found(village_id: str) -> ApiError:
     return ApiError(404, "village_not_found", f"Le village {village_id} est introuvable.")
 
 
+class _EventIn(BaseModel):
+    """`at` defaults to now; `dry_run` answers the report and stores nothing."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    at: int | None = Field(default=None, ge=0)
+    dry_run: bool = False
+
+
+class TaskStartedIn(_EventIn):
+    type: Literal["task_started"]
+    task_id: str
+
+
+class TaskFinishedIn(_EventIn):
+    type: Literal["task_finished"]
+    task_id: str
+
+
+class PriorityChangedIn(_EventIn):
+    """`objective`: weights of the objective by name; a weight left out keeps its value.
+
+    A free mapping, so that no schema property is named like a login (E05 guard).
+    """
+
+    type: Literal["priority_changed"]
+    objective: dict[str, Annotated[float, Field(strict=False)]]
+
+
+class ItemUsedIn(_EventIn):
+    """`task_id`: the started job of a book, null for a potion or a rune."""
+
+    type: Literal["item_used"]
+    item: str
+    task_id: str | None = None
+
+
+class ResourcesCorrectedIn(_EventIn):
+    """`resources`: whole units observed at `at`."""
+
+    type: Literal["resources_corrected"]
+    resources: dict[Resource, Annotated[int, Field(ge=0)]]
+
+
+class ScheduleChangedIn(_EventIn):
+    type: Literal["schedule_changed"]
+
+
+class GameDataUpdatedIn(_EventIn):
+    type: Literal["game_data_updated"]
+    pack_id: str
+
+
+class SnapshotImportedIn(_EventIn):
+    type: Literal["snapshot_imported"]
+
+
+EventIn = Annotated[
+    TaskStartedIn
+    | TaskFinishedIn
+    | PriorityChangedIn
+    | ItemUsedIn
+    | ResourcesCorrectedIn
+    | ScheduleChangedIn
+    | GameDataUpdatedIn
+    | SnapshotImportedIn,
+    Field(discriminator="type"),
+]
+
+
+class PlacementOut(BaseModel):
+    start: int
+    end: int
+    lane: str
+    lane_slot: int
+
+
+class ChangeOut(BaseModel):
+    task_id: str
+    before: PlacementOut | None
+    after: PlacementOut | None
+
+
+class ConsequencesOut(BaseModel):
+    goal_finish_delta_s: int | None
+    score_delta: float
+    idle_delta_s: int
+    messages: list[Explained]
+
+
+class ReplanOut(BaseModel):
+    """`plan_id` is the new plan, null for a dry run."""
+
+    plan_id: int | None
+    previous_plan_id: int
+    dry_run: bool
+    changes: list[ChangeOut]
+    unchanged_count: int
+    consequences: ConsequencesOut
+    proof: ProofOut
+    input_hash: str
+
+
+class JournalEntryOut(BaseModel):
+    entry_id: int
+    type: str
+    at: int
+    task_id: str | None
+    payload: dict[str, Any]
+    plan_id: int | None
+
+
+def _missing_input(error: MissingInputError) -> ApiError:
+    return ApiError(
+        409,
+        "missing_input",
+        "Des données manquent pour calculer le plan : " + ", ".join(error.missing) + ".",
+        extra={"missing": list(error.missing)},
+    )
+
+
+def _invalid_plan(error: InvalidPlanError) -> ApiError:
+    return ApiError(
+        500,
+        "invalid_plan",
+        f"Le moteur {error.engine} a produit un plan refusé par le simulateur.",
+        [f"{v.code}: {v.task_id}" for v in error.violations],
+    )
+
+
+def _no_active_pack() -> ApiError:
+    return ApiError(409, "no_active_pack", "Aucun pack de données n'est actif.")
+
+
+def _stale(connection: sqlite3.Connection, village_id: str, stored: store.StoredPlan) -> bool:
+    """A newer export than the one the plan was computed on has been imported."""
+    latest = store.latest_snapshot_row(connection, village_id)
+    return stored.snapshot_id is not None and latest is not None and latest[0] != stored.snapshot_id
+
+
 def _no_plan(village_id: str) -> ApiError:
     return ApiError(404, "no_plan", f"Aucun plan n'a encore été calculé pour {village_id}.")
 
@@ -169,37 +316,29 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
     now: int = request.app.state.clock()
     overrides = request.app.state.settings.planner_overrides
     with open_db(_data_dir(request)) as connection:
-        snapshot = store.latest_snapshot(connection, village_id)
-        if snapshot is None:
+        found = store.latest_snapshot_row(connection, village_id)
+        if found is None:
             raise _village_not_found(village_id)
+        snapshot_id, snapshot = found
         pack = store.active_pack(connection)
         if pack is None:
-            raise ApiError(409, "no_active_pack", "Aucun pack de données n'est actif.")
+            raise _no_active_pack()
         inputs = PlanInputs(
             snapshot=snapshot,
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
+            journal=journal_store.entries(connection, village_id),
         )
     try:
         outcome = create_plan(inputs, params, overrides, now)
     except MissingInputError as error:
-        raise ApiError(
-            409,
-            "missing_input",
-            "Des données manquent pour calculer le plan : " + ", ".join(error.missing) + ".",
-            extra={"missing": list(error.missing)},
-        ) from None
+        raise _missing_input(error) from None
     except InvalidPlanError as error:
-        raise ApiError(
-            500,
-            "invalid_plan",
-            f"Le moteur {error.engine} a produit un plan refusé par le simulateur.",
-            [f"{v.code}: {v.task_id}" for v in error.violations],
-        ) from None
+        raise _invalid_plan(error) from None
     with open_db(_data_dir(request)) as connection:
-        plan_id = store.save_plan(connection, village_id, outcome, now)
-    return PlanOut.model_validate({"plan_id": plan_id, **outcome.body})
+        plan_id = store.save_plan(connection, village_id, outcome, now, snapshot_id=snapshot_id)
+    return PlanOut.model_validate({"plan_id": plan_id, **outcome.body, "stale": False})
 
 
 @router.post(
@@ -237,7 +376,10 @@ _READ_ERRORS: dict[int | str, dict[str, Any]] = {
 
 @router.get("/{village_id}/plans/latest", response_model=PlanOut, responses=_READ_ERRORS)
 def get_latest_plan(request: Request, village_id: str) -> PlanOut:
-    return PlanOut.model_validate(_latest(request, village_id).body)
+    stored = _latest(request, village_id)
+    with open_db(_data_dir(request)) as connection:
+        stale = _stale(connection, village_id, stored)
+    return PlanOut.model_validate({**stored.body, "stale": stale})
 
 
 @router.get(
@@ -300,3 +442,136 @@ def get_recommendations(request: Request, village_id: str) -> RecommendationsOut
             "actions": actions,
         }
     )
+
+
+# --------------------------------------------------------------------------- replanning (E11)
+
+
+def _event(payload: Any, now: int) -> Event:
+    return Event(
+        type=payload.type,
+        at=payload.at if payload.at is not None else now,
+        task_id=getattr(payload, "task_id", None),
+        item=getattr(payload, "item", None),
+        resources=getattr(payload, "resources", None),
+        objective=getattr(payload, "objective", None),
+        pack_id=getattr(payload, "pack_id", None),
+    )
+
+
+def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> ReplanOut:
+    now: int = request.app.state.clock()
+    overrides = request.app.state.settings.planner_overrides
+    with open_db(_data_dir(request)) as connection:
+        found = store.latest_snapshot_row(connection, village_id)
+        if found is None:
+            raise _village_not_found(village_id)
+        snapshot_id, snapshot = found
+        if not store.plan_exists(connection, village_id, plan_id):
+            raise ApiError(404, "plan_not_found", f"Le plan {plan_id} est inconnu.")
+        stored = store.latest_plan(connection, village_id)
+        assert stored is not None
+        if stored.plan_id != plan_id:
+            raise ApiError(
+                409,
+                "plan_outdated",
+                f"Le plan {plan_id} a été remplacé par le plan {stored.plan_id}.",
+            )
+        pack = store.active_pack(connection)
+        if pack is None:
+            raise _no_active_pack()
+        if isinstance(payload, GameDataUpdatedIn) and not store.pack_exists(
+            connection, payload.pack_id
+        ):
+            raise ApiError(404, "pack_not_found", f"Le pack {payload.pack_id} est inconnu.")
+        inputs = PlanInputs(
+            snapshot=snapshot,
+            manual=store.manual_state(connection, village_id),
+            pack=pack,
+            schedule_profile=store.schedule_profile(connection, village_id),
+            journal=journal_store.entries(connection, village_id),
+        )
+    previous = PreviousPlan(
+        plan_id=stored.plan_id,
+        body=stored.body,
+        params=stored.params,
+        input_hash=stored.input_hash,
+        explanations=stored.explanations,
+        same_snapshot=stored.snapshot_id == snapshot_id,
+    )
+    try:
+        result = replan(inputs, previous, _event(payload, now), now, overrides)
+    except ReplanError as error:
+        raise ApiError(error.status, error.code, error.message) from None
+    except MissingInputError as error:
+        raise _missing_input(error) from None
+    except InvalidPlanError as error:
+        raise _invalid_plan(error) from None
+    new_plan_id: int | None = None
+    if not payload.dry_run:
+        with open_db(_data_dir(request)) as connection:
+            new_plan_id = store.save_plan(
+                connection,
+                village_id,
+                result.outcome,
+                now,
+                snapshot_id=snapshot_id,
+                previous_plan_id=stored.plan_id,
+            )
+            journal_store.add_entry(connection, village_id, result.entry, new_plan_id, now)
+    return ReplanOut.model_validate(
+        {"plan_id": new_plan_id, "dry_run": payload.dry_run, **result.report}
+    )
+
+
+@router.post(
+    "/{village_id}/plans/{plan_id}/events",
+    response_model=ReplanOut,
+    responses={
+        404: {
+            "model": ErrorBody,
+            "description": "Code village_not_found, plan_not_found, task_not_found or "
+            "pack_not_found.",
+        },
+        409: {
+            "model": ErrorBody,
+            "description": "Code plan_outdated, already_started, task_not_started, "
+            "task_not_ready, lane_full, pack_not_active, missing_input or no_active_pack.",
+        },
+        422: {
+            "model": ErrorBody,
+            "description": "Code future_event, unsupported_item, item_not_applicable, "
+            "invalid_event or invalid_request.",
+        },
+        500: {"model": ErrorBody, "description": "The engine plan is invalid (invalid_plan)."},
+    },
+)
+async def post_event(
+    request: Request, village_id: str, plan_id: int, payload: EventIn
+) -> ReplanOut:
+    """Record an event on the latest plan and replan (a dry run records nothing)."""
+    return await run_in_threadpool(_replan, request, village_id, plan_id, payload)
+
+
+@router.get(
+    "/{village_id}/journal",
+    response_model=list[JournalEntryOut],
+    responses={404: {"model": ErrorBody, "description": "Unknown village (village_not_found)."}},
+)
+def get_journal(request: Request, village_id: str) -> list[JournalEntryOut]:
+    """Every recorded event of the village, the most recent first."""
+    with open_db(_data_dir(request)) as connection:
+        if not store.village_exists(connection, village_id):
+            raise _village_not_found(village_id)
+        found = journal_store.entries(connection, village_id)
+    return [
+        JournalEntryOut(
+            entry_id=row.entry_id,
+            type=row.type,
+            at=row.at,
+            task_id=row.task_id,
+            payload=dict(row.payload),
+            plan_id=row.plan_id,
+        )
+        for row in reversed(found)
+    ]

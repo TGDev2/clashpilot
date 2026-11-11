@@ -39,6 +39,28 @@ TEMPLATES = {
     "estimated_resource": "Le stock de {label} est estimé, pas confirmé.",
     "stale_resource": "Le stock de {label} a été saisi il y a plus de 7 jours.",
     "aging_resource": "Le stock de {label} a été saisi il y a 7 jours.",
+    # consequences of a replanning
+    "event_recorded": "Événement pris en compte : {label}.",
+    "plan_kept": "Le plan précédent reste valable : il est conservé tel quel.",
+    "tasks_moved": "{value} amélioration(s) changent de date ou de créneau.",
+    "tasks_unchanged": "{value} amélioration(s) restent inchangées.",
+    "finish_earlier": "La dernière amélioration prévue se termine {duration} plus tôt.",
+    "finish_later": "La dernière amélioration prévue se termine {duration} plus tard.",
+    "score_gain": "Le score du plan gagne {value:.4f} point(s).",
+    "score_loss": "Le score du plan perd {value:.4f} point(s).",
+    "idle_less": "Les files d'amélioration restent inoccupées {duration} de moins.",
+    "idle_more": "Les files d'amélioration restent inoccupées {duration} de plus.",
+}
+
+EVENT_LABELS = {
+    "task_started": "démarrage d'une amélioration",
+    "task_finished": "fin d'une amélioration",
+    "priority_changed": "nouvelles priorités",
+    "item_used": "objet magique utilisé",
+    "resources_corrected": "stock corrigé",
+    "schedule_changed": "horaires modifiés",
+    "game_data_updated": "données de jeu mises à jour",
+    "snapshot_imported": "nouvel export du village",
 }
 
 WAIT_NAME = "Attendre"
@@ -51,3 +73,17 @@ def entry(code: str, value: Any = None, **fields: Any) -> dict[str, Any]:
 
 def resource_label(name: str) -> str:
     return RESOURCE_LABELS.get(name, name)
+
+
+def duration_label(seconds: int) -> str:
+    """`seconds` as French text: "2 j 3 h 05 min", "45 min", "30 s"."""
+    seconds = abs(seconds)
+    if seconds < 60:
+        return f"{seconds} s"
+    days, rest = divmod(seconds // 60, 24 * 60)
+    hours, minutes = divmod(rest, 60)
+    if days:
+        return f"{days} j {hours} h {minutes:02d} min"
+    if hours:
+        return f"{hours} h {minutes:02d} min"
+    return f"{minutes} min"
