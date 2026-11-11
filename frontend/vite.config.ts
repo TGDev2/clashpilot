@@ -32,9 +32,6 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    // user-event types about 25 ms per key in jsdom: a long form test overruns the 5 s default when
-    // the verify lanes run in parallel.
-    testTimeout: 20_000,
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**", "dist/**"],
