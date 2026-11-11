@@ -1,0 +1,13 @@
+{
+  "resources": {
+    "gold": { "value": 100000, "status": "confirmed", "as_of": 1790000000 },
+    "elixir": { "value": 50000, "status": "confirmed", "as_of": 1790000000 },
+    "dark_elixir": { "value": 5000, "status": "confirmed", "as_of": 1790000000 }
+  },
+  "builders_total": 3,
+  "farm_rate": {
+    "gold": { "low": 500, "expected": 1000, "high": 1500 },
+    "elixir": { "low": 500, "expected": 1000, "high": 1500 },
+    "dark_elixir": { "low": 10, "expected": 20, "high": 30 }
+  }
+}

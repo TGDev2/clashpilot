@@ -1,0 +1,13 @@
+{
+  "tag": "#FICTIF09",
+  "timestamp": 1790000000,
+  "buildings": [
+    { "data": 9000001, "lvl": 2 },
+    { "data": 9000002, "lvl": 1 },
+    { "data": 9000002, "lvl": 1 },
+    { "data": 9000003, "lvl": 1 },
+    { "data": 9000004, "lvl": 2 }
+  ],
+  "units": [{ "data": 9000007, "lvl": 1 }],
+  "heroes": [{ "data": 9000006, "lvl": 1, "timer": 5000 }]
+}

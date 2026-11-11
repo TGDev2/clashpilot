@@ -1,4 +1,5 @@
-// node scripts/test-slow.mjs [path]: run the slow (benchmark) tests with pytest -m slow.
+// node scripts/test-slow.mjs [path]: run the slow (benchmark) tests with pytest -m slow, one xdist worker
+// per benchmark (5 of them, each single-threaded under the repro profile): in sequence they exceed 10 min.
 // pytest exit code 5 (nothing collected) counts as success; any other code is propagated.
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -14,7 +15,7 @@ try {
   process.exit(1);
 }
 
-const result = spawnSync(venvPython(), pytestArgs(target, ['-m', 'slow']), {
+const result = spawnSync(venvPython(), pytestArgs(target, ['-m', 'slow', '-n', '5']), {
   stdio: 'inherit',
   cwd: ROOT,
 });
