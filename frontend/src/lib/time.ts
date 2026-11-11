@@ -35,6 +35,25 @@ export function dayFormatter(timeZone: string): (epochSeconds: number) => string
   };
 }
 
+/**
+ * An epoch as the value of a local date-time input, `YYYY-MM-DDTHH:MM`, read in `timeZone`. The text
+ * carries no zone: the server converts it back with the zone of the schedule (`to-epoch`).
+ */
+export function localDateTimeValue(epochSeconds: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("fr-FR", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(epochSeconds * 1000));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
 /** A function giving the local wall-clock time (`HH:MM`) of an epoch in `timeZone`. */
 export function clockFormatter(timeZone: string): (epochSeconds: number) => string {
   const format = new Intl.DateTimeFormat("fr-FR", {

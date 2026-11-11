@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-aria-components";
 import { api, type Provenance, settle } from "../api/client";
 import { useApi } from "../api/useApi";
+import { useLatestPlan } from "../api/usePlan";
+import { PlanProgress } from "../components/PlanProgress";
 import { ProvenanceBadge } from "../components/ProvenanceBadge";
+import { StaleBanner } from "../components/replan/StaleBanner";
 import { Banner, PageTitle, ProblemAlert, Section } from "../components/ui";
 import { fr } from "../i18n/fr";
 import { formatDate, formatNumber, formatRemaining } from "../lib/format";
@@ -62,6 +65,8 @@ export function Dashboard() {
     villageId,
   );
 
+  // The plan is optional here: no plan or a failed read shows no indicator, nothing else.
+  const plan = useLatestPlan(villageId);
   const activePack = packs.data?.find((pack) => pack.active);
   const village = state.data;
   const itemKeys = uniqueKeys(
@@ -90,6 +95,14 @@ export function Dashboard() {
           </p>
         )}
         <ProblemAlert problem={state.problem} />
+        {villageId !== null && plan.data?.stale === true && (
+          <StaleBanner villageId={villageId} planId={plan.data.plan_id} onReplanned={plan.reload} />
+        )}
+        {plan.data !== undefined && (
+          <Section title={fr.dashboard.progress}>
+            <PlanProgress plan={plan.data} nowMs={now} />
+          </Section>
+        )}
         {village && (
           <>
             <p className="font-mono text-xs text-mist">

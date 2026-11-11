@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Link } from "react-aria-components";
 import {
   type ActionOut,
@@ -6,10 +6,13 @@ import {
   api,
   type PlanOut,
   type RecommendationsOut,
+  type ReplanOut,
   settle,
 } from "../api/client";
 import { useApi } from "../api/useApi";
 import { ProofLabel } from "../components/ProofLabel";
+import { ActionControls } from "../components/replan/ActionControls";
+import { ConsequenceMessages } from "../components/replan/ChangesPanel";
 import { Banner, Button, PageTitle, ProblemAlert, Section } from "../components/ui";
 import { fr } from "../i18n/fr";
 import { formatInZone } from "../lib/format";
@@ -37,7 +40,15 @@ function Messages({ title, items }: { title?: string; items: Explained[] }) {
   );
 }
 
-function ActionCard({ action, timezone }: { action: ActionOut; timezone: string }) {
+function ActionCard({
+  action,
+  timezone,
+  controls,
+}: {
+  action: ActionOut;
+  timezone: string;
+  controls?: ReactNode;
+}) {
   const waiting = action.action === "wait";
   const level = action.reliability.level;
   return (
@@ -64,6 +75,7 @@ function ActionCard({ action, timezone }: { action: ActionOut; timezone: string 
         <p className="mt-1 text-sm font-medium text-bone">{fr.now.level[level]}</p>
         <Messages items={action.reliability.factors} />
       </div>
+      {controls}
     </article>
   );
 }
@@ -111,6 +123,7 @@ export function NowPage() {
   const [done, setDone] = useState(false);
   const [lastPlan, setLastPlan] = useState<PlanOut | undefined>();
   const [problem, setProblem] = useState<ApiProblem | undefined>();
+  const [applied, setApplied] = useState<ReplanOut | undefined>();
 
   async function compute() {
     if (villageId === null) {
@@ -118,6 +131,7 @@ export function NowPage() {
     }
     setBusy(true);
     setDone(false);
+    setApplied(undefined);
     setProblem(undefined);
     // No engine and no profile: the server's defaults apply (auto when it exists, profile fast).
     const outcome = await settle(() =>
@@ -184,6 +198,11 @@ export function NowPage() {
             )}
           </p>
         )}
+        {applied !== undefined && (
+          <Section title={fr.replan.consequences}>
+            <ConsequenceMessages report={applied} />
+          </Section>
+        )}
         {noPlan && lastPlan === undefined && <p className="text-mist">{fr.now.noPlan}</p>}
         {answer !== undefined && (
           <Section title={fr.now.actions}>
@@ -193,7 +212,26 @@ export function NowPage() {
             ) : (
               <div className="space-y-4">
                 {answer.actions.map((action, index) => (
-                  <ActionCard key={actionKeys[index]} action={action} timezone={answer.timezone} />
+                  <ActionCard
+                    key={actionKeys[index]}
+                    action={action}
+                    timezone={answer.timezone}
+                    controls={
+                      villageId !== null && action.action === "start" ? (
+                        <ActionControls
+                          villageId={villageId}
+                          planId={answer.plan_id}
+                          action={action}
+                          now={answer.now}
+                          timezone={answer.timezone}
+                          onApplied={(report) => {
+                            setApplied(report);
+                            reco.reload();
+                          }}
+                        />
+                      ) : undefined
+                    }
+                  />
                 ))}
               </div>
             )}
