@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "pack_id": "fictional-test-pack-items",
+  "game_version": "test-items-0",
+  "as_of": "2026-01-01",
+  "fictional": true,
+  "sources": [
+    {
+      "id": "s1",
+      "label": "Source fictive de test",
+      "url": "https://example.invalid/fictional-pack",
+      "retrieved_at": "2026-01-01",
+      "license": "CC0-1.0"
+    },
+    {
+      "id": "s2",
+      "label": "Regles fictives des objets de test",
+      "url": "https://example.invalid/fictional-item-rules",
+      "retrieved_at": "2026-01-01",
+      "license": "CC0-1.0"
+    }
+  ],
+  "items": [
+    {
+      "data_id": 9000001, "name": "Tour de test", "kind": "building", "village": "home",
+      "lane": "builder", "category": "town_hall", "tags": ["town_hall"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9000002, "name": "Hutte de test", "kind": "building", "village": "home",
+      "lane": "none", "category": "builder_hut", "tags": ["builder_hut"],
+      "max_count_by_th": {"1": 2, "2": 3}
+    },
+    {
+      "data_id": 9000003, "name": "Laboratoire de test", "kind": "building", "village": "home",
+      "lane": "builder", "category": "laboratory", "tags": ["laboratory"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9000004, "name": "Canon de test", "kind": "building", "village": "home",
+      "lane": "builder", "category": "defense", "tags": [],
+      "max_count_by_th": {"1": 1, "2": 2}
+    },
+    {
+      "data_id": 9000005, "name": "Reserve d'or de test", "kind": "building", "village": "home",
+      "lane": "builder", "category": "resource_storage", "tags": ["storage"],
+      "max_count_by_th": {"1": 1, "2": 2}
+    },
+    {
+      "data_id": 9000006, "name": "Heros de test", "kind": "hero", "village": "home",
+      "lane": "lab", "category": "hero", "tags": ["hero"],
+      "max_count_by_th": {"2": 1}
+    },
+    {
+      "data_id": 9000007, "name": "Troupe de test", "kind": "troop", "village": "home",
+      "lane": "lab", "category": "troop", "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9000008, "name": "Mortier de test", "kind": "building", "village": "home",
+      "lane": "builder", "category": "defense", "tags": [],
+      "max_count_by_th": {"9": 2}
+    },
+    {
+      "data_id": 9000009, "name": "Sort de test", "kind": "spell", "village": "home",
+      "lane": "lab", "category": "spell", "tags": [],
+      "max_count_by_th": {"9": 1}
+    }
+  ],
+  "levels": [
+    {"data_id": 9000001, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9000001, "level": 2, "duration_s": 600, "cost": {"gold": 1000}, "requires": [], "source": "s1"},
+    {"data_id": 9000001, "level": 3, "duration_s": 3600, "cost": {"gold": 5000}, "requires": [], "source": "s1"},
+    {"data_id": 9000002, "level": 1, "duration_s": 30, "cost": {"gems": 10}, "requires": [], "source": "s1"},
+    {"data_id": 9000003, "level": 1, "duration_s": 120, "cost": {"elixir": 200}, "requires": [{"data_id": 9000001, "level": 1}], "source": "s1"},
+    {"data_id": 9000003, "level": 2, "duration_s": 900, "cost": {"elixir": 1500}, "requires": [{"data_id": 9000001, "level": 2}], "source": "s1"},
+    {"data_id": 9000004, "level": 1, "duration_s": 30, "cost": {"gold": 50}, "requires": [{"data_id": 9000001, "level": 1}], "source": "s1"},
+    {"data_id": 9000004, "level": 2, "duration_s": 300, "cost": {"gold": 400}, "requires": [{"data_id": 9000001, "level": 1}], "source": "s1"},
+    {"data_id": 9000004, "level": 3, "duration_s": 1800, "cost": {"gold": 2000}, "requires": [{"data_id": 9000001, "level": 2}], "source": "s1"},
+    {"data_id": 9000004, "level": 4, "duration_s": 7200, "cost": {"gold": 6000}, "requires": [{"data_id": 9000001, "level": 3}], "source": "s1"},
+    {"data_id": 9000005, "level": 1, "duration_s": 60, "cost": {"gold": 150}, "requires": [], "source": "s1"},
+    {"data_id": 9000005, "level": 2, "duration_s": 600, "cost": {"gold": 900}, "requires": [{"data_id": 9000001, "level": 2}], "source": "s1"},
+    {"data_id": 9000006, "level": 1, "duration_s": 1800, "cost": {"dark_elixir": 300}, "requires": [{"data_id": 9000003, "level": 1}], "source": "s1"},
+    {"data_id": 9000006, "level": 2, "duration_s": 14400, "cost": {"dark_elixir": 1200}, "requires": [{"data_id": 9000003, "level": 2}], "source": "s1"},
+    {"data_id": 9000007, "level": 1, "duration_s": 300, "cost": {"elixir": 100}, "requires": [{"data_id": 9000003, "level": 1}], "source": "s1"},
+    {"data_id": 9000007, "level": 2, "duration_s": 3600, "cost": {"elixir": 800}, "requires": [{"data_id": 9000003, "level": 2}], "source": "s1"},
+    {"data_id": 9000008, "level": 1, "duration_s": 120, "cost": {"gold": 300}, "requires": [], "source": "s1"},
+    {"data_id": 9000008, "level": 2, "duration_s": 86400, "cost": {"gold": 3000}, "requires": [], "source": "s1"},
+    {"data_id": 9000008, "level": 3, "duration_s": 172800, "cost": {"gold": 6000}, "requires": [{"data_id": 9000001, "level": 2}], "source": "s1"},
+    {"data_id": 9000009, "level": 1, "duration_s": 600, "cost": {"elixir": 500}, "requires": [{"data_id": 9000003, "level": 1}], "source": "s1"},
+    {"data_id": 9000009, "level": 2, "duration_s": 86400, "cost": {"elixir": 4000}, "requires": [{"data_id": 9000003, "level": 1}], "source": "s1"},
+    {"data_id": 9000009, "level": 3, "duration_s": 172800, "cost": {"elixir": 9000}, "requires": [{"data_id": 9000003, "level": 2}], "source": "s1"}
+  ],
+  "storage": [
+    {"data_id": 9000005, "level": 1, "resource": "gold", "capacity": 3000, "source": "s1"},
+    {"data_id": 9000005, "level": 2, "resource": "gold", "capacity": 9000, "source": "s1"}
+  ],
+  "rules": {
+    "builder_potion": {"duration_multiplier": 10, "duration_s": 3600, "source": "s2"},
+    "research_potion": {"duration_multiplier": 10, "duration_s": 3600, "source": "s2"},
+    "book_of_building": {"kinds": ["building"], "source": "s2"},
+    "rune_of_gold": {"resource": "gold", "source": "s2"},
+    "gem_finish": {"rates": [{"up_to_s": 3600, "gems": 7}, {"up_to_s": 86400, "gems": 120}], "source": "s2"},
+    "helper_upgrade": {"levels": [{"level": 2, "cost": {"gems": 75}}], "source": "s2"}
+  }
+}
