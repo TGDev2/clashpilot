@@ -4,6 +4,9 @@ replan after an event and read the journal (E11).
 Dates are UTC epochs; `timezone` is the IANA key of the schedule profile, for display only. The
 engine runs in the thread pool, never in the event loop. A plan is `stale` once an export newer
 than the one it was computed on is imported; the event `snapshot_imported` replans on it.
+
+A plan may name a strategy of `GET /api/meta/strategies` with an army composition, a goal and war
+windows (E16): the plan carries them back, and every replanning applies them again.
 """
 
 from __future__ import annotations
@@ -13,7 +16,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.json_schema import SkipJsonSchema
 from starlette.concurrency import run_in_threadpool
 
@@ -24,9 +27,11 @@ from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.messages import WAIT_NAME, entry
 from clashpilot.planning.replan import Event, PreviousPlan, ReplanError, replan
 from clashpilot.planning.service import (
+    InvalidGoalError,
     InvalidPlanError,
     PlanInputs,
     UnknownEngineError,
+    UnknownStrategyError,
     create_plan,
     resolve_params,
 )
@@ -37,12 +42,40 @@ from clashpilot.storage.db import open_db
 router = APIRouter(prefix="/api/villages", tags=["plans"])
 
 
+class GoalRef(BaseModel):
+    """Reach `level` on the item `data_id`."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    data_id: int
+    level: int = Field(ge=1)
+
+
+class WarWindow(BaseModel):
+    """A war window, UTC epochs: no hero upgrade runs in `[start, end)` under `war_cwl`."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    start: int
+    end: int
+
+    @model_validator(mode="after")
+    def _ordered(self) -> WarWindow:
+        if self.end <= self.start:
+            raise ValueError("end must be after start")
+        return self
+
+
 class PlanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     horizon_days: int | None = Field(default=None, ge=1, le=365)
     engine: str | None = None
     profile: Literal["fast", "repro"] | None = None
+    strategy: str | None = None
+    composition: list[int] = Field(default_factory=list)
+    goal: GoalRef | None = None
+    war_windows: list[WarWindow] = Field(default_factory=list)
 
 
 class ProofOut(BaseModel):
@@ -96,6 +129,10 @@ class PlanOut(BaseModel):
     excluded: list[ExcludedOut]
     warnings: list[str]
     stale: bool = False
+    strategy: str | None = None
+    composition: list[int] = Field(default_factory=list)
+    goal: GoalRef | None = None
+    war_windows: list[WarWindow] = Field(default_factory=list)
 
 
 class Explained(BaseModel):
@@ -308,11 +345,33 @@ def _no_plan(village_id: str) -> ApiError:
     return ApiError(404, "no_plan", f"Aucun plan n'a encore été calculé pour {village_id}.")
 
 
+def _unknown_strategy(error: UnknownStrategyError) -> ApiError:
+    return ApiError(422, "unknown_strategy", f"Stratégie inconnue : {error.strategy}.")
+
+
+def _invalid_goal(error: InvalidGoalError) -> ApiError:
+    return ApiError(
+        422,
+        "invalid_goal",
+        f"Le pack actif n'a pas de niveau {error.level} pour l'objet {error.data_id}.",
+    )
+
+
 def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
     try:
-        params = resolve_params(payload.horizon_days, payload.engine, payload.profile)
+        params = resolve_params(
+            payload.horizon_days,
+            payload.engine,
+            payload.profile,
+            strategy=payload.strategy,
+            composition=payload.composition,
+            goal=None if payload.goal is None else (payload.goal.data_id, payload.goal.level),
+            war_windows=[(window.start, window.end) for window in payload.war_windows],
+        )
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
+    except UnknownStrategyError as error:
+        raise _unknown_strategy(error) from None
     now: int = request.app.state.clock()
     overrides = request.app.state.settings.planner_overrides
     with open_db(_data_dir(request)) as connection:
@@ -332,6 +391,10 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
         )
     try:
         outcome = create_plan(inputs, params, overrides, now)
+    except InvalidGoalError as error:
+        raise _invalid_goal(error) from None
+    except UnknownStrategyError as error:
+        raise _unknown_strategy(error) from None
     except MissingInputError as error:
         raise _missing_input(error) from None
     except InvalidPlanError as error:
@@ -348,7 +411,11 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
     responses={
         404: {"model": ErrorBody, "description": "Unknown village (code village_not_found)."},
         409: {"model": ErrorBody, "description": "Code missing_input or no_active_pack."},
-        422: {"model": ErrorBody, "description": "Code unknown_engine or invalid_request."},
+        422: {
+            "model": ErrorBody,
+            "description": "Code unknown_engine, unknown_strategy, invalid_goal or "
+            "invalid_request.",
+        },
         500: {"model": ErrorBody, "description": "The engine plan is invalid (invalid_plan)."},
     },
 )
@@ -503,6 +570,8 @@ def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> Re
         result = replan(inputs, previous, _event(payload, now), now, overrides)
     except ReplanError as error:
         raise ApiError(error.status, error.code, error.message) from None
+    except UnknownStrategyError as error:
+        raise _unknown_strategy(error) from None
     except MissingInputError as error:
         raise _missing_input(error) from None
     except InvalidPlanError as error:

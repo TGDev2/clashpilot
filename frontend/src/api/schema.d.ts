@@ -110,6 +110,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/meta/strategies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Strategies
+         * @description The progression strategies a plan may name, with their French label and their weights.
+         */
+        get: operations["list_strategies_api_meta_strategies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/import": {
         parameters: {
             query?: never;
@@ -562,6 +582,16 @@ export interface components {
              */
             type: "game_data_updated";
         };
+        /**
+         * GoalRef
+         * @description Reach `level` on the item `data_id`.
+         */
+        GoalRef: {
+            /** Data Id */
+            data_id: number;
+            /** Level */
+            level: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -778,10 +808,13 @@ export interface components {
         PlanOut: {
             /** Assignments */
             assignments: components["schemas"]["AssignmentOut"][];
+            /** Composition */
+            composition?: number[];
             /** Engine */
             engine: string;
             /** Excluded */
             excluded: components["schemas"]["ExcludedOut"][];
+            goal?: components["schemas"]["GoalRef"] | null;
             /** Horizon Days */
             horizon_days: number;
             /** Horizon End */
@@ -808,19 +841,30 @@ export interface components {
              * @default false
              */
             stale: boolean;
+            /** Strategy */
+            strategy?: string | null;
             /** Timezone */
             timezone: string;
+            /** War Windows */
+            war_windows?: components["schemas"]["WarWindow"][];
             /** Warnings */
             warnings: string[];
         };
         /** PlanRequest */
         PlanRequest: {
+            /** Composition */
+            composition?: number[];
             /** Engine */
             engine?: string | null;
+            goal?: components["schemas"]["GoalRef"] | null;
             /** Horizon Days */
             horizon_days?: number | null;
             /** Profile */
             profile?: ("fast" | "repro") | null;
+            /** Strategy */
+            strategy?: string | null;
+            /** War Windows */
+            war_windows?: components["schemas"]["WarWindow"][];
         };
         /** PresenceOut */
         PresenceOut: {
@@ -1072,6 +1116,22 @@ export interface components {
             /** Url */
             url: string | null;
         };
+        /** StrategiesOut */
+        StrategiesOut: {
+            /** Strategies */
+            strategies: components["schemas"]["StrategyOut"][];
+        };
+        /** StrategyOut */
+        StrategyOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Weights */
+            weights: {
+                [key: string]: number;
+            };
+        };
         /** SyncOut */
         SyncOut: {
             /** Conflicts */
@@ -1210,6 +1270,16 @@ export interface components {
             village_id: string;
             /** Warnings */
             warnings: string[];
+        };
+        /**
+         * WarWindow
+         * @description A war window, UTC epochs: no hero upgrade runs in `[start, end)` under `war_cwl`.
+         */
+        WarWindow: {
+            /** End */
+            end: number;
+            /** Start */
+            start: number;
         };
         /**
          * WeeklyWindow
@@ -1538,6 +1608,26 @@ export interface operations {
             };
         };
     };
+    list_strategies_api_meta_strategies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StrategiesOut"];
+                };
+            };
+        };
+    };
     import_export_api_villages_import_post: {
         parameters: {
             query?: never;
@@ -1833,7 +1923,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Code unknown_engine or invalid_request. */
+            /** @description Code unknown_engine, unknown_strategy, invalid_goal or invalid_request. */
             422: {
                 headers: {
                     [name: string]: unknown;
