@@ -207,6 +207,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/gems/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Gems Compare
+         * @description Rank keeping the gems against finishing each running job; price the helpers' upgrades.
+         */
+        post: operations["post_gems_compare_api_villages__village_id__gems_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/villages/{village_id}/items/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Items Compare
+         * @description Rank keeping `item` against each of its uses, simulated on the latest plan's inputs.
+         */
+        post: operations["post_items_compare_api_villages__village_id__items_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/journal": {
         parameters: {
             query?: never;
@@ -604,6 +644,26 @@ export interface components {
             /** Scenario Ids */
             scenario_ids: number[];
         };
+        /**
+         * ComparisonOut
+         * @description The ranking, the proof of the reference plan, its id and the comparison's scope.
+         */
+        ComparisonOut: {
+            /** Options */
+            options: components["schemas"]["OptionOut"][];
+            proof: components["schemas"]["ProofOut"] | null;
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /** Reference Plan Id */
+            reference_plan_id: number;
+            /** Scope */
+            scope: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "unsupported" | "unavailable";
+        };
         /** ConflictOut */
         ConflictOut: {
             /** Level */
@@ -614,6 +674,28 @@ export interface components {
             reason: string;
             /** Section */
             section: string;
+        };
+        /**
+         * ConsequenceOut
+         * @description `job_shortened` carries the job and its two ends, `resource_filled` the two stocks.
+         */
+        ConsequenceOut: {
+            /** After */
+            after?: number | null;
+            /** Before */
+            before?: number | null;
+            /** Code */
+            code: string;
+            /** End After */
+            end_after?: number | null;
+            /** End Before */
+            end_before?: number | null;
+            /** Message */
+            message: string;
+            /** Resource */
+            resource?: string | null;
+            /** Task Id */
+            task_id?: string | null;
         };
         /** ConsequencesOut */
         ConsequencesOut: {
@@ -813,6 +895,36 @@ export interface components {
             type: "game_data_updated";
         };
         /**
+         * GemsCompareRequest
+         * @description `candidate_tasks` limits the running jobs a gem finish is tried on.
+         */
+        GemsCompareRequest: {
+            /** Candidate Tasks */
+            candidate_tasks?: string[] | null;
+            /** Engine */
+            engine?: string | null;
+            /** Profile */
+            profile?: ("fast" | "repro") | null;
+        };
+        /** GemsComparisonOut */
+        GemsComparisonOut: {
+            helpers: components["schemas"]["HelpersOut"];
+            /** Options */
+            options: components["schemas"]["OptionOut"][];
+            proof: components["schemas"]["ProofOut"] | null;
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /** Reference Plan Id */
+            reference_plan_id: number;
+            /** Scope */
+            scope: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "unsupported" | "unavailable";
+        };
+        /**
          * GoalRef
          * @description Reach `level` on the item `data_id`.
          */
@@ -826,6 +938,53 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HelperOptionOut
+         * @description An upgrade priced by `helper_upgrade`; its effect has no rule, so no score.
+         */
+        HelperOptionOut: {
+            /** Consequences */
+            consequences: components["schemas"]["ConsequenceOut"][];
+            /** Cost */
+            cost: {
+                [key: string]: number;
+            };
+            /** Data Id */
+            data_id: number;
+            /** From Level */
+            from_level: number;
+            reliability: components["schemas"]["Reliability"];
+            /** Score Delta */
+            score_delta: number | null;
+            /** To Level */
+            to_level: number;
+        };
+        /** HelpersOut */
+        HelpersOut: {
+            /** Options */
+            options: components["schemas"]["HelperOptionOut"][];
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "unsupported";
+        };
+        /**
+         * ItemCompareRequest
+         * @description `item` is a rule key of the active pack; `candidate_tasks` the tasks it may act on.
+         */
+        ItemCompareRequest: {
+            /** Candidate Tasks */
+            candidate_tasks?: string[] | null;
+            /** Engine */
+            engine?: string | null;
+            /** Item */
+            item: string;
+            /** Profile */
+            profile?: ("fast" | "repro") | null;
         };
         /** ItemLevels */
         ItemLevels: {
@@ -980,6 +1139,30 @@ export interface components {
             status: string;
             /** Value */
             value: number;
+        };
+        /**
+         * OptionOut
+         * @description One ranked option; `score_delta` is against the plan without item (0 for `keep`).
+         */
+        OptionOut: {
+            /** At */
+            at: number | null;
+            /** Consequences */
+            consequences: components["schemas"]["ConsequenceOut"][];
+            /** Finish Delta S */
+            finish_delta_s: number;
+            /** Gems */
+            gems?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "keep" | "use" | "gem_finish";
+            reliability: components["schemas"]["Reliability"];
+            /** Score Delta */
+            score_delta: number;
+            /** Task Id */
+            task_id: string | null;
         };
         /**
          * OriginalLevel
@@ -2294,6 +2477,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_gems_compare_api_villages__village_id__gems_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GemsCompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GemsComparisonOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy or invalid_request. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_items_compare_api_villages__village_id__items_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemCompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparisonOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy or invalid_request. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

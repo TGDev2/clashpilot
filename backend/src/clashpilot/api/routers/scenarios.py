@@ -204,11 +204,11 @@ def _scenario_not_found(scenario_id: int) -> ApiError:
     return ApiError(404, "scenario_not_found", f"Le scénario {scenario_id} est introuvable.")
 
 
-def _unknown_strategy(strategy: str) -> ApiError:
+def unknown_strategy_error(strategy: str) -> ApiError:
     return ApiError(422, "unknown_strategy", f"Stratégie inconnue : {strategy}.")
 
 
-def _missing_input(error: MissingInputError) -> ApiError:
+def missing_input_error(error: MissingInputError) -> ApiError:
     return ApiError(
         409,
         "missing_input",
@@ -217,7 +217,7 @@ def _missing_input(error: MissingInputError) -> ApiError:
     )
 
 
-def _base(request: Request, village_id: str) -> tuple[PlanInputs, store.StoredPlan, bool]:
+def base_inputs(request: Request, village_id: str) -> tuple[PlanInputs, store.StoredPlan, bool]:
     """The inputs of the village and its latest plan, and whether it is on the latest export."""
     with open_db(_data_dir(request)) as connection:
         found = store.latest_snapshot_row(connection, village_id)
@@ -272,9 +272,9 @@ def _create(request: Request, village_id: str, payload: ScenarioRequest) -> Scen
     strategies = load_strategies()
     for overlay in payload.overlays:
         if isinstance(overlay, StrategyIn) and overlay.key not in strategies:
-            raise _unknown_strategy(overlay.key)
+            raise unknown_strategy_error(overlay.key)
     overlays = [overlay.model_dump() for overlay in payload.overlays]
-    inputs, stored, same_snapshot = _base(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id)
     config = planner_config(request.app.state.settings.planner_overrides, resolved.profile)
     try:
         document = run_scenario(
@@ -287,9 +287,9 @@ def _create(request: Request, village_id: str, payload: ScenarioRequest) -> Scen
             same_snapshot=same_snapshot,
         )
     except MissingInputError as error:
-        raise _missing_input(error) from None
+        raise missing_input_error(error) from None
     except UnknownStrategyError as error:
-        raise _unknown_strategy(error.strategy) from None
+        raise unknown_strategy_error(error.strategy) from None
     document["plan_id"] = stored.plan_id
     now: int = request.app.state.clock()
     with open_db(_data_dir(request)) as connection:
@@ -338,7 +338,7 @@ def delete_scenario(request: Request, village_id: str, scenario_id: int) -> Resp
 
 
 def _compare(request: Request, village_id: str, payload: CompareRequest) -> CompareOut:
-    inputs, stored, same_snapshot = _base(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id)
     with open_db(_data_dir(request)) as connection:
         chosen = []
         for scenario_id in payload.scenario_ids:
@@ -349,9 +349,9 @@ def _compare(request: Request, village_id: str, payload: CompareRequest) -> Comp
     try:
         real = plan_figures(inputs, stored.params, stored.body, same_snapshot=same_snapshot)
     except MissingInputError as error:
-        raise _missing_input(error) from None
+        raise missing_input_error(error) from None
     except UnknownStrategyError as error:
-        raise _unknown_strategy(error.strategy) from None
+        raise unknown_strategy_error(error.strategy) from None
     rows = [
         {
             **(scenario.body.get("figures") or {}),
