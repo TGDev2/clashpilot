@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
-import { Button as AriaButton, type ButtonProps } from "react-aria-components";
+import {
+  Button as AriaButton,
+  type ButtonProps,
+  FieldError,
+  Input,
+  Label,
+  Text,
+  TextField,
+} from "react-aria-components";
 import type { ApiProblem } from "../api/client";
 
 /** A page section: a titled card, optionally the target of an in-page anchor. */
@@ -80,3 +88,44 @@ export function Banner({ children }: { children: ReactNode }) {
 
 export const inputClass =
   "w-full rounded-md border border-line bg-ink px-3 py-2 font-mono text-sm text-bone placeholder:text-mist/60";
+
+/**
+ * A text field with its label, an optional hint and an error message, all linked by
+ * react-aria (aria-labelledby, aria-describedby, aria-invalid).
+ */
+export function Field({
+  label,
+  value,
+  onChange,
+  hint,
+  error,
+  placeholder,
+  inputMode,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  hint?: string;
+  error?: string | undefined;
+  placeholder?: string;
+  inputMode?: "numeric" | "text";
+}) {
+  return (
+    <TextField
+      value={value}
+      onChange={onChange}
+      isInvalid={error !== undefined}
+      validationBehavior="aria"
+      className="block space-y-1"
+    >
+      <Label className="block text-xs text-mist">{label}</Label>
+      <Input placeholder={placeholder} inputMode={inputMode} className={inputClass} />
+      {hint !== undefined && (
+        <Text slot="description" className="block text-xs text-mist">
+          {hint}
+        </Text>
+      )}
+      <FieldError className="block text-xs text-unknown">{error}</FieldError>
+    </TextField>
+  );
+}

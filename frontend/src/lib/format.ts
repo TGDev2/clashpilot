@@ -36,3 +36,17 @@ export function formatRemaining(finishAt: number, nowMs: number): string | null 
   parts.push(`${minutes} ${fr.dashboard.minutes}`);
   return parts.join(" ");
 }
+
+/**
+ * An epoch as a wall-clock time in the IANA zone the API sent (ADR-10): `Intl` does the zone
+ * arithmetic, the browser's own zone plays no part. An unknown zone falls back to UTC, said aloud.
+ */
+export function formatInZone(epochSeconds: number, timeZone: string): string {
+  const date = new Date(epochSeconds * 1000);
+  const options: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
+  try {
+    return new Intl.DateTimeFormat("fr-FR", { ...options, timeZone }).format(date);
+  } catch {
+    return `${new Intl.DateTimeFormat("fr-FR", { ...options, timeZone: "UTC" }).format(date)} UTC`;
+  }
+}

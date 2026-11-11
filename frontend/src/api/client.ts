@@ -8,6 +8,12 @@ export type PackSummary = components["schemas"]["PackSummary"];
 export type DiffOut = components["schemas"]["DiffOut"];
 export type SyncOut = components["schemas"]["SyncOut"];
 export type ManualOut = components["schemas"]["ManualOut"];
+export type ScheduleProfile = components["schemas"]["ScheduleProfile"];
+export type WeeklyWindow = components["schemas"]["WeeklyWindow"];
+export type PlanOut = components["schemas"]["PlanOut"];
+export type RecommendationsOut = components["schemas"]["RecommendationsOut"];
+export type ActionOut = components["schemas"]["ActionOut"];
+export type ProofOut = components["schemas"]["ProofOut"];
 
 let client: ReturnType<typeof createClient<paths>> | undefined;
 
@@ -24,15 +30,22 @@ export function api(): ReturnType<typeof createClient<paths>> {
 }
 
 /** What the user is told when a call fails: the API's own French message when it sent one. */
-export type ApiProblem = { code: string; message: string; errors: string[] };
+/** `missing` names the inputs of a 409 `missing_input`. */
+export type ApiProblem = {
+  code: string;
+  message: string;
+  errors: string[];
+  missing: string[];
+};
 
 export function problemOf(error: unknown, status: number): ApiProblem {
   const detail = (error as { detail?: unknown } | null | undefined)?.detail;
   if (detail !== null && typeof detail === "object") {
-    const { code, message, errors } = detail as {
+    const { code, message, errors, missing } = detail as {
       code?: unknown;
       message?: unknown;
       errors?: unknown;
+      missing?: unknown;
     };
     if (typeof message === "string") {
       return {
@@ -41,16 +54,20 @@ export function problemOf(error: unknown, status: number): ApiProblem {
         errors: Array.isArray(errors)
           ? errors.filter((e): e is string => typeof e === "string")
           : [],
+        missing: Array.isArray(missing)
+          ? missing.filter((m): m is string => typeof m === "string")
+          : [],
       };
     }
   }
-  return { code: "error", message: fr.common.genericError(status), errors: [] };
+  return { code: "error", message: fr.common.genericError(status), errors: [], missing: [] };
 }
 
 export const networkProblem: ApiProblem = {
   code: "network",
   message: fr.common.networkError,
   errors: [],
+  missing: [],
 };
 
 export type Outcome<T> = { ok: true; data: T } | { ok: false; problem: ApiProblem };
