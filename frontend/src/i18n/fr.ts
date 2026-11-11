@@ -161,6 +161,7 @@ export const fr = {
     saving: "Enregistrement…",
     invalid: "Indiquez des nombres entiers positifs ou nuls.",
     noteLabel: "Note de la correction",
+    levelsTitle: "Niveaux de l'objet",
   },
   soon: {
     text: "Cette page arrive dans une prochaine version.",
@@ -473,5 +474,6 @@ export const fr = {
     endsAt: "fin le",
     notInPlan: "Cette tâche n'est pas dans le dernier plan.",
     back: "Retour aux constructeurs",
+    gameData: "Données de jeu de cette amélioration",
   },
 } as const;

@@ -8,7 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Gantt } from "./pages/Gantt";
 import { History } from "./pages/History";
 import { Import } from "./pages/Import";
-import { LevelSheet } from "./pages/LevelSheet";
+import { ItemLevelsPage, LevelSheet } from "./pages/LevelSheet";
 import { MagicItems } from "./pages/MagicItems";
 import { NowPage } from "./pages/NowPage";
 import { Placeholder } from "./pages/Placeholder";
@@ -51,6 +51,7 @@ export function App() {
               <Route path="ressources" element={<Resources />} />
               <Route path="scenarios" element={<Scenarios />} />
               <Route path="objets" element={<MagicItems />} />
+              <Route path="donnees/:packId/:dataId" element={<ItemLevelsPage />} />
               <Route path="donnees/:packId/:dataId/:level" element={<LevelSheet />} />
               <Route path="*" element={<Placeholder title={fr.nav.dashboard} />} />
             </Route>

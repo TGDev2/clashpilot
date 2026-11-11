@@ -95,6 +95,14 @@ function TaskView({ plan, taskId }: { plan: PlanOut; taskId: string }) {
         ids={task.requires}
         plan={plan}
       />
+      <p className="text-sm">
+        <Link
+          to={`/donnees/${encodeURIComponent(plan.pack.pack_id)}/${task.data_id}`}
+          className={linkClass}
+        >
+          {fr.task.gameData}
+        </Link>
+      </p>
       <TaskLinks title={fr.task.unlocks} empty={fr.task.noUnlocks} ids={unlocks} plan={plan} />
     </article>
   );

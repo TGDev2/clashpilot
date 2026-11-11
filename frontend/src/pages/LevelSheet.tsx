@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { type ApiProblem, api, settle } from "../api/client";
 import type { components } from "../api/schema";
 import { useApi } from "../api/useApi";
@@ -186,6 +186,51 @@ export function LevelSheet() {
         )}
         {item !== undefined && row !== undefined && (
           <LevelView item={item} level={row} packId={packId} onSaved={setSaved} />
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Every level of a pack item, each linked to its own sheet; a corrected level carries the mention. */
+export function ItemLevelsPage() {
+  const { packId = "", dataId = "" } = useParams();
+  const id = wholeNumber(dataId);
+  const loaded = useApi<Item>(
+    () =>
+      settle(() =>
+        api().GET("/api/gamedata/packs/{pack_id}/items/{data_id}", {
+          params: { path: { pack_id: packId, data_id: id ?? 0 } },
+        }),
+      ),
+    id === undefined ? null : `${packId}:${id}`,
+  );
+  const item = loaded.data;
+  return (
+    <>
+      <PageTitle>{fr.levelSheet.levelsTitle}</PageTitle>
+      <div className="space-y-6">
+        {loaded.loading && item === undefined && <p className="text-mist">{fr.common.loading}</p>}
+        <ProblemNotice problem={loaded.problem} />
+        {item !== undefined && (
+          <section className="space-y-3">
+            <h3 className="font-display text-xl text-bone">{item.name}</h3>
+            <ul className="space-y-1 text-sm">
+              {item.levels.map((row) => (
+                <li key={row.level} className="flex flex-wrap items-center gap-x-3">
+                  <Link
+                    to={`/donnees/${encodeURIComponent(packId)}/${item.data_id}/${row.level}`}
+                    className="text-signal underline underline-offset-2"
+                  >
+                    {fr.common.level(row.level)}
+                  </Link>
+                  {row.original !== null && row.original !== undefined && (
+                    <span className="text-xs text-estimated">{fr.levelSheet.manual}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
     </>
