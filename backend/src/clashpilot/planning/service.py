@@ -8,6 +8,9 @@ the API answers and stores. No I/O and no clock: `now` is a parameter. The calle
 
 `input_hash` is the SHA-256 of the canonical JSON (sorted keys, no spaces) of the problem, the
 objective, the engine, the profile and the seed.
+
+The inputs carry the journal of the village (E11): the problem is compiled from the export and the
+whole journal, and the objective is the one of the latest `priority_changed`, if any.
 """
 
 from __future__ import annotations
@@ -21,11 +24,12 @@ from typing import Any, Literal
 
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import ManualState, VillageSnapshot
-from clashpilot.planning.compile import compile_problem
+from clashpilot.planning.compile import compile_problem, running_jobs
 from clashpilot.planning.explain import consumed_resources, explain_plan, reliability
+from clashpilot.planning.journal import JournalEntry, KnownJob, objective_of, replay
 from clashpilot.planning.model import Decision, Plan, Problem
 from clashpilot.planning.objective import Objective, score
-from clashpilot.planning.registry import PLANNERS, PlannerConfig
+from clashpilot.planning.registry import PLANNERS, Planner, PlannerConfig
 from clashpilot.planning.simulate import SimResult, Violation, simulate
 from clashpilot.schedule.profile import ScheduleProfile
 
@@ -62,6 +66,7 @@ class PlanInputs:
     manual: ManualState
     pack: GamePack
     schedule_profile: ScheduleProfile | None
+    journal: tuple[JournalEntry, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -182,6 +187,36 @@ def _assignments(pack: GamePack, problem: Problem, plan: Plan) -> list[dict[str,
     return rows
 
 
+def engine(name: str) -> Planner:
+    """The engine registered under `name`, looked up when a plan is computed."""
+    return PLANNERS[name]
+
+
+def compile_inputs(
+    inputs: PlanInputs,
+    now: int,
+    horizon_days: int,
+    carried: Mapping[str, tuple[int, int]] | None = None,
+) -> tuple[Problem, dict[str, KnownJob]]:
+    """The problem of the export and the journal at `now`, and every started job known then.
+
+    `carried` keeps the `(start, lane_slot)` an earlier plan gave the jobs of the export.
+    Raises `MissingInputError`.
+    """
+    running = running_jobs(inputs.snapshot, inputs.pack, now)
+    state, known = replay(inputs.journal, running, inputs.snapshot.exported_at, carried)
+    problem = compile_problem(
+        inputs.snapshot,
+        inputs.manual,
+        inputs.pack,
+        inputs.schedule_profile,
+        now,
+        horizon_days,
+        journal=state,
+    )
+    return problem, known
+
+
 def create_plan(
     inputs: PlanInputs, params: PlanParams, overrides: Mapping[str, Any], now: int
 ) -> PlanOutcome:
@@ -189,18 +224,31 @@ def create_plan(
 
     Raises `MissingInputError` (from `compile_problem`) and `InvalidPlanError`.
     """
-    problem = compile_problem(
-        inputs.snapshot,
-        inputs.manual,
-        inputs.pack,
-        inputs.schedule_profile,
-        now,
-        params.horizon_days,
-    )
-    objective = DEFAULT_OBJECTIVE
+    problem, _ = compile_inputs(inputs, now, params.horizon_days)
+    objective = objective_of(inputs.journal) or DEFAULT_OBJECTIVE
     config = planner_config(overrides, params.profile)
-    plan = PLANNERS[params.engine].solve(problem, objective, config)
-    sim = simulate(problem, plan)
+    plan = engine(params.engine).solve(problem, objective, config)
+    return describe(inputs, params, problem, plan, objective, config, now)
+
+
+def describe(
+    inputs: PlanInputs,
+    params: PlanParams,
+    problem: Problem,
+    plan: Plan,
+    objective: Objective,
+    config: PlannerConfig,
+    now: int,
+    *,
+    reference: Plan | None = None,
+    explanations: Mapping[str, dict[str, Any]] | None = None,
+) -> PlanOutcome:
+    """Judge `plan` with `simulate` and build the documents the API answers and stores.
+
+    `reference` feeds the perturbation term of the score; `explanations` (of an earlier plan)
+    replace those of the tasks they name. Raises `InvalidPlanError`.
+    """
+    sim = simulate(problem, plan, reference)
     if not sim.valid:
         raise InvalidPlanError(params.engine, sim.violations)
 
@@ -256,6 +304,18 @@ def create_plan(
         warnings=tuple(warnings),
         reproducible=reproducible,
         body=body,
-        explanations=explain_plan(problem, plan, sim),
+        explanations=_explanations(problem, plan, sim, explanations),
         reliability=reliability(consumed, resources, fictional=pack.data.fictional, now=now),
     )
+
+
+def _explanations(
+    problem: Problem,
+    plan: Plan,
+    sim: SimResult,
+    kept: Mapping[str, dict[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    explained = explain_plan(problem, plan, sim)
+    if kept:
+        explained.update({name: kept[name] for name in explained if name in kept})
+    return explained

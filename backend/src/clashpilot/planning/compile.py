@@ -12,13 +12,22 @@ Two readings the SPEC leaves open:
 - A running job counts for its `to_level` in the current level of an instance (the default target
   town hall and the gap used by `max_tasks`), but a `requires` is only met by a finished level; a
   level still running is required through the id of its frozen job.
+
+The journal of E11 comes in as a `JournalState`, already replayed by `planning.journal`. Its jobs
+apply after rule 2, so that the instances keep the ranks of the export and a started job keeps its
+task id: a job of the journal starts on an instance at the level before it, a fact about a job of
+the export changes its end (and keeps the start and slot an earlier plan gave it), and a job ended
+by `now` leaves its instance at `to_level`. The storage cap stays the one of the export, as the
+first plan saw it: the simulator holds caps fixed, and the next import brings the new storage.
+Stock observations (manual input, corrections, runes) take the latest one; the journal payments
+after it are taken off as they happen, the income accruing in between up to the cap.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 from clashpilot.gamedata.pack import INSTANT_UPGRADE_TAG, GamePack, Item, LevelRow
 from clashpilot.ingest.state import ManualState, RunningJob, VillageSnapshot
@@ -51,6 +60,54 @@ MISSING_PREREQUISITE = "missing_prerequisite"
 HORIZON_LIMIT = "horizon_limit"
 
 
+@dataclass(frozen=True)
+class JobFact:
+    """What the journal knows of one started upgrade, beyond the export.
+
+    A job of the journal has every field. A fact about a job of the export gives its end (after a
+    `task_finished` or an item) and, when an earlier plan listed it, the start and slot kept from
+    that plan. A field left None takes the value of rule 6.
+    """
+
+    task_id: str
+    end: int
+    start: int | None = None
+    lane_slot: int | None = None
+
+
+@dataclass(frozen=True)
+class StockFact:
+    """The stock of `resource` observed at `at`, in whole units (correction or rune)."""
+
+    resource: str
+    at: int
+    value: int
+
+
+@dataclass(frozen=True)
+class Payment:
+    """The cost paid at `at` by a job the journal saw start."""
+
+    at: int
+    cost: Mapping[str, int]
+
+
+@dataclass(frozen=True)
+class JournalState:
+    jobs: tuple[JobFact, ...] = ()
+    stock: tuple[StockFact, ...] = ()
+    payments: tuple[Payment, ...] = ()
+
+
+@dataclass(frozen=True)
+class RunningRef:
+    """A job of the export still running at `now`, under its task id (rules 2 and 6)."""
+
+    task_id: str
+    lane: str
+    end: int
+
+
 class MissingInputError(ValueError):
     """An input the problem cannot do without; `missing` names each one."""
 
@@ -66,6 +123,7 @@ class _Instance:
     level: int  # last finished level
     job: RunningJob | None = None  # running after now, towards job.to_level
     town_hall: int = 0  # town hall level needed to build it (rule 3), 0 if owned
+    known: JobFact | None = None  # what the journal knows of `job`
 
     @property
     def base(self) -> int:
@@ -147,6 +205,87 @@ def _unlocked_instances(
         if fresh:
             added[item.data_id] = fresh
     return added
+
+
+def running_jobs(snapshot: VillageSnapshot, pack: GamePack, now: int) -> tuple[RunningRef, ...]:
+    """The jobs of the export still running at `now`, under the task ids `compile_problem` uses."""
+    refs: list[RunningRef] = []
+    for data_id, instances in _owned_instances(snapshot, pack, now).items():
+        item = pack.item(data_id)
+        if item is None or item.lane == "none":
+            continue
+        for instance in instances:
+            if instance.job is not None:
+                name = task_id(data_id, instance.index, instance.job.to_level)
+                refs.append(RunningRef(name, item.lane, instance.job.finish_at))
+    return tuple(sorted(refs, key=lambda ref: ref.task_id))
+
+
+# --------------------------------------------------------------------------- journal jobs
+
+
+def split_task_id(name: str) -> tuple[int, int, int]:
+    """`(data_id, instance, to_level)` of a task id; ValueError if it has another shape."""
+    data_id, instance, to_level = name.split(":")
+    return int(data_id), int(instance), int(to_level)
+
+
+def _fits(instance: _Instance, to_level: int) -> bool:
+    """The instance runs a job towards `to_level`, or stands idle just below it."""
+    if instance.job is not None:
+        return instance.job.to_level == to_level
+    return instance.level == to_level - 1
+
+
+def _with_fact(instance: _Instance, fact: JobFact, to_level: int, now: int) -> _Instance:
+    if fact.end <= now:
+        return replace(instance, level=to_level, job=None, known=None)
+    job = instance.job
+    if job is None:
+        job = RunningJob(instance.data_id, fact.end, to_level, "journal", "home")
+    return replace(instance, level=to_level - 1, job=replace(job, finish_at=fact.end), known=fact)
+
+
+def _apply_jobs(
+    instances: Mapping[int, list[_Instance]], facts: Sequence[JobFact], now: int
+) -> tuple[dict[int, list[_Instance]], list[JobFact]]:
+    """Put each fact on its instance; return the instances and the facts that found none.
+
+    A fact goes to the instance its task id names when that instance fits; the others of the same
+    class `(data_id, to_level)` go to the remaining fitting instances by rank (SPEC section 4,
+    rule 2), so that a new export ranking the instances otherwise doubles nothing.
+    """
+    out = {data_id: list(found) for data_id, found in instances.items()}
+    groups: dict[tuple[int, int], list[tuple[int, JobFact]]] = defaultdict(list)
+    for fact in facts:
+        try:
+            data_id, index, to_level = split_task_id(fact.task_id)
+        except ValueError:
+            continue
+        groups[(data_id, to_level)].append((index, fact))
+    left: list[JobFact] = []
+    for (data_id, to_level), group in sorted(groups.items()):
+        found = out.get(data_id)
+        if not found:
+            left.extend(fact for _, fact in group)
+            continue
+        position = {instance.index: k for k, instance in enumerate(found)}
+        taken: set[int] = set()
+        rest: list[JobFact] = []
+        for index, fact in sorted(group, key=lambda g: (g[0], g[1].task_id)):
+            k = position.get(index)
+            if k is not None and _fits(found[k], to_level):
+                taken.add(k)
+                found[k] = _with_fact(found[k], fact, to_level, now)
+            else:
+                rest.append(fact)
+        free = [
+            k for k, instance in enumerate(found) if k not in taken and _fits(instance, to_level)
+        ]
+        for k, fact in zip(free, rest, strict=False):
+            found[k] = _with_fact(found[k], fact, to_level, now)
+        left.extend(rest[len(free) :])
+    return out, left
 
 
 # --------------------------------------------------------------------------- town hall (rule 1)
@@ -367,63 +506,125 @@ def _select(
 # --------------------------------------------------------------------------- frozen jobs (rule 6)
 
 
+@dataclass(frozen=True)
+class _Draft:
+    name: str
+    lane: str
+    start: int
+    end: int
+    extra: bool
+    slot: int | None
+
+
+def _free_slot(used: set[int], first: int) -> int:
+    slot = first
+    while slot in used:
+        slot += 1
+    used.add(slot)
+    return slot
+
+
 def _frozen_jobs(
     pack: GamePack,
-    owned: Mapping[int, list[_Instance]],
+    instances: Mapping[int, list[_Instance]],
     snapshot: VillageSnapshot,
     lanes: Mapping[str, int],
     now: int,
 ) -> list[FrozenJob]:
-    drafts: list[tuple[str, str, int, int, bool]] = []
-    for data_id, instances in owned.items():
+    drafts: list[_Draft] = []
+    for data_id, found in instances.items():
         item = pack.item(data_id)
         if item is None or item.lane == "none":
             continue
-        for instance in instances:
-            job = instance.job
+        for instance in found:
+            job, known = instance.job, instance.known
             if job is None:
                 continue
-            row = pack.level(data_id, job.to_level)
-            begun = job.finish_at - row.duration_s if row is not None else snapshot.exported_at
+            if known is not None and known.start is not None:
+                start = known.start
+            else:
+                row = pack.level(data_id, job.to_level)
+                begun = job.finish_at - row.duration_s if row is not None else snapshot.exported_at
+                start = min(now, begun)
             drafts.append(
-                (
+                _Draft(
                     task_id(data_id, instance.index, job.to_level),
                     item.lane,
-                    min(now, begun),
+                    start,
                     job.finish_at,
                     job.extra,
+                    known.lane_slot if known is not None else None,
                 )
             )
 
     frozen: list[FrozenJob] = []
-    for lane in sorted({draft[1] for draft in drafts}):
-        mine = sorted((d for d in drafts if d[1] == lane), key=lambda d: (d[3], d[0]))
-        regular = [d for d in mine if not d[4]]
-        extra = [d for d in mine if d[4]]
-        # Every regular job runs at `now`, so each takes its own slot; extra ones come after.
-        first_extra_slot = max(lanes.get(lane, 0), len(regular))
-        slots = [*range(len(regular)), *range(first_extra_slot, first_extra_slot + len(extra))]
-        for (name, _, start, end, is_extra), slot in zip([*regular, *extra], slots, strict=True):
-            frozen.append(FrozenJob(name, lane, slot, start, end, is_extra))
+    for lane in sorted({draft.lane for draft in drafts}):
+        mine = sorted((d for d in drafts if d.lane == lane), key=lambda d: (d.end, d.name))
+        # A slot the journal or an earlier plan gave is kept. Every other regular job runs at
+        # `now`, so each takes the lowest free slot; extra ones come after the lane's capacity.
+        used = {d.slot for d in mine if d.slot is not None}
+        slots = {d.name: d.slot for d in mine if d.slot is not None}
+        for draft in mine:
+            if draft.slot is None and not draft.extra:
+                slots[draft.name] = _free_slot(used, 0)
+        first_extra_slot = max(lanes.get(lane, 0), max(used, default=-1) + 1)
+        for draft in mine:
+            if draft.slot is None and draft.extra:
+                slots[draft.name] = _free_slot(used, first_extra_slot)
+        for draft in mine:
+            frozen.append(
+                FrozenJob(draft.name, lane, slots[draft.name], draft.start, draft.end, draft.extra)
+            )
     return sorted(frozen, key=lambda job: (job.lane, job.lane_slot))
 
 
 # --------------------------------------------------------------------------- resources (rule 7)
 
 
+def _observations(manual: ManualState, journal: JournalState) -> dict[str, tuple[int, int]]:
+    """The latest `(as_of, value)` of each resource; the journal wins a tie."""
+    seen: dict[str, tuple[int, int]] = {
+        name: (typed.as_of, typed.value) for name, typed in manual.resources.items()
+    }
+    for fact in sorted(journal.stock, key=lambda f: f.at):
+        if fact.resource not in seen or fact.at >= seen[fact.resource][0]:
+            seen[fact.resource] = (fact.at, fact.value)
+    return seen
+
+
 def _resources(
-    manual: ManualState, caps: Mapping[str, int], consumed: set[str], now: int
+    manual: ManualState,
+    caps: Mapping[str, int],
+    consumed: set[str],
+    now: int,
+    journal: JournalState,
 ) -> ResourceModel:
+    observed = _observations(manual, journal)
     income = {
         name: manual.farm_rate[name].expected if name in manual.farm_rate else 0
-        for name in sorted(consumed | set(manual.resources) | set(manual.farm_rate))
+        for name in sorted(consumed | set(observed) | set(manual.farm_rate))
     }
+    payments = sorted(journal.payments, key=lambda p: p.at)
     initial: dict[str, int] = {}
-    for name, typed in manual.resources.items():
-        elapsed = max(0, now - typed.as_of)
-        amount = (typed.value * HOUR_S + income[name] * elapsed) // HOUR_S
-        initial[name] = min(amount, caps[name]) if name in caps else amount
+    for name, (as_of, value) in observed.items():
+        # In units x 3600: the income of one second is exactly `income_per_hour`.
+        rate = income[name]
+        limit = caps[name] * HOUR_S if name in caps else None
+        level, clock = value * HOUR_S, as_of
+        for payment in payments:
+            amount = payment.cost.get(name, 0)
+            if amount <= 0 or not as_of < payment.at <= now:
+                continue
+            level = max(0, _accrue(level, rate, payment.at - clock, limit) - amount * HOUR_S)
+            clock = payment.at
+        initial[name] = _accrue(level, rate, now - clock, limit) // HOUR_S
     return ResourceModel(initial=initial, cap=dict(caps), income_per_hour=income)
+
+
+def _accrue(level: int, rate: int, seconds: int, limit: int | None) -> int:
+    """`level` (units x 3600) after `seconds` of income, what goes over `limit` being lost."""
+    gained = level + rate * max(0, seconds)
+    return min(gained, limit) if limit is not None else gained
 
 
 # --------------------------------------------------------------------------- entry point
@@ -438,9 +639,17 @@ def compile_problem(
     horizon_days: int,
     target_th: int | None = None,
     max_tasks: int = 400,
+    journal: JournalState | None = None,
 ) -> Problem:
-    """The problem of planning the village of `snapshot` from `now` for `horizon_days` days."""
-    owned = _owned_instances(snapshot, pack, now)
+    """The problem of planning the village of `snapshot` from `now` for `horizon_days` days.
+
+    `journal` is what happened since the export (E11): started jobs, stock observations and
+    payments, already replayed.
+    """
+    journal = journal if journal is not None else JournalState()
+    exported = _owned_instances(snapshot, pack, now)
+    caps = _caps(pack, exported, manual)
+    owned, left = _apply_jobs(exported, journal.jobs, now)
     town_hall = next(
         (i for i in pack.data.items if TOWN_HALL_TAG in i.tags and i.village == HOME), None
     )
@@ -459,9 +668,9 @@ def compile_problem(
 
     # Rules 2 to 5: instances, unlocks, prerequisites and exclusions.
     instances = {data_id: list(found) for data_id, found in owned.items()}
-    for data_id, fresh in _unlocked_instances(pack, owned, target).items():
+    unlocked, _ = _apply_jobs(_unlocked_instances(pack, owned, target), left, now)
+    for data_id, fresh in unlocked.items():
         instances.setdefault(data_id, []).extend(fresh)
-    caps = _caps(pack, owned, manual)
     needs = _TownHallNeeds(pack, town_hall_id)
     candidates = _candidates(pack, instances, needs, target, town_hall_id, caps)
 
@@ -477,13 +686,14 @@ def compile_problem(
         if any(data_id in owned for data_id in owners):
             lanes[lane] = 1
 
-    # Rule 6: running jobs.
-    frozen = _frozen_jobs(pack, owned, snapshot, lanes, now)
+    # Rule 6: running jobs, those of the export and those of the journal.
+    frozen = _frozen_jobs(pack, instances, snapshot, lanes, now)
     tasks, excluded = _select(candidates, {job.task_id for job in frozen}, max_tasks)
 
     # Rules 7 and 8: resources and mandatory inputs.
     consumed = {name for task in tasks for name, amount in task.cost.items() if amount > 0}
-    missing = sorted(name for name in consumed if name not in manual.resources)
+    known = set(manual.resources) | {fact.resource for fact in journal.stock}
+    missing = sorted(name for name in consumed if name not in known)
     if schedule_profile is None:
         missing.append("schedule_profile")
     if builders is None:
@@ -499,7 +709,7 @@ def compile_problem(
         lanes=lanes,
         tasks=tuple(tasks),
         frozen=tuple(frozen),
-        resources=_resources(manual, caps, consumed, now),
+        resources=_resources(manual, caps, consumed, now, journal),
         calendar=expand_windows(schedule_profile, now, horizon_end),
         policy=Policy(
             mode=rules.mode,
