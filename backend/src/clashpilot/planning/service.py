@@ -240,7 +240,7 @@ def _name(pack: GamePack, data_id: int) -> str:
     return item.name if item is not None else str(data_id)
 
 
-def _assignments(pack: GamePack, problem: Problem, plan: Plan) -> list[dict[str, Any]]:
+def assignment_rows(pack: GamePack, problem: Problem, plan: Plan) -> list[dict[str, Any]]:
     tasks = {task.id: task for task in problem.tasks}
     rows: list[dict[str, Any]] = []
     for job in problem.frozen:
@@ -370,7 +370,7 @@ def describe(
             "game_version": pack.data.game_version,
             "fictional": pack.data.fictional,
         },
-        "assignments": _assignments(pack, problem, plan),
+        "assignments": assignment_rows(pack, problem, plan),
         "excluded": [
             {
                 "data_id": excluded.data_id,
