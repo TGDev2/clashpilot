@@ -1,35 +1,46 @@
+@import "tailwindcss";
+
+/*
+ * Chart-room theme: a deep sea-ink ground, bone-coloured type, and one colour per provenance
+ * status (green = confirmed, amber = estimated, dashed rose = unknown) so a value's trust level
+ * reads before its number does.
+ */
+@theme {
+  --color-ink: #0a1114;
+  --color-deck: #111b1f;
+  --color-deck-hi: #172429;
+  --color-line: #263a40;
+  --color-bone: #ebe6d6;
+  --color-mist: #93a7ac;
+  --color-confirmed: #62d2a6;
+  --color-estimated: #e6b34c;
+  --color-unknown: #d4808a;
+  --color-signal: #6fb7d6;
+  --font-display: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+
 :root {
   color-scheme: dark;
-  --bg: #0f1218;
-  --fg: #e6e9ef;
-  --muted: #9aa3b2;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html,
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+:focus-visible {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
 }
 
-.app-header,
-.app-main,
-.app-footer {
-  padding: 1rem;
-}
-
-.app-main {
-  flex: 1;
-}
-
-.app-header p,
-.app-footer {
-  color: var(--muted);
+/* Smooth in-page scrolling only for people who have not asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
