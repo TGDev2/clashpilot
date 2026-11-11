@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import asdict
+from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Query, Request
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.gamedata import ErrorBody
-from clashpilot.schedule.expand import expand_windows
+from clashpilot.schedule.expand import expand_windows, local_to_epoch
 from clashpilot.schedule.profile import ScheduleProfile
 from clashpilot.storage.db import open_db
 
@@ -33,6 +34,18 @@ class SchedulePreview(BaseModel):
     absence: list[tuple[int, int]]
     available: list[tuple[int, int]]
     preferred: list[tuple[int, int]]
+
+
+class ToEpochIn(BaseModel):
+    """`local_datetime`: wall-clock time in the profile zone, `AAAA-MM-JJTHH:MM[:SS]`, no offset."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    local_datetime: Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$")]
+
+
+class EpochOut(BaseModel):
+    epoch: int
 
 
 def _validated(body: dict[str, Any]) -> ScheduleProfile:
@@ -114,3 +127,28 @@ def preview_schedule(
     now: int = request.app.state.clock()
     calendar = expand_windows(profile, now, now + days * SECONDS_PER_DAY)
     return SchedulePreview(**asdict(calendar))
+
+
+@router.post(
+    "/{village_id}/schedule/to-epoch",
+    response_model=EpochOut,
+    responses={
+        404: {"model": ErrorBody, "description": "Code schedule_not_found."},
+        422: {"model": ErrorBody, "description": "Code invalid_local_datetime."},
+    },
+)
+def post_to_epoch(request: Request, village_id: str, body: ToEpochIn) -> EpochOut:
+    """The UTC epoch of a local time, read in the zone of the stored profile (ADR-10).
+
+    A time skipped by a clock change gives the first valid instant, a repeated one its first
+    occurrence, so the browser never does the zone arithmetic.
+    """
+    with open_db(request.app.state.settings.data_dir) as connection:
+        profile = _stored(connection, village_id)
+    try:
+        local = datetime.fromisoformat(body.local_datetime)
+    except ValueError:
+        raise ApiError(
+            422, "invalid_local_datetime", "La date et l'heure locales sont invalides."
+        ) from None
+    return EpochOut(epoch=local_to_epoch(local, profile.tz))

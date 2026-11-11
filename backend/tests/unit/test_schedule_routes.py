@@ -105,3 +105,62 @@ def test_preview_defaults_to_seven_days(client: TestClient) -> None:
     sleep = client.get(f"{URL}/preview").json()["sleep"]
 
     assert sleep[-1][1] <= NOW + 7 * 86400 < sleep[-1][1] + 86400
+
+
+# ------------------------------------------------------------------------------ /schedule/to-epoch
+
+
+def to_epoch(client: TestClient, local: str) -> Any:
+    return client.post(f"{URL}/to-epoch", json={"local_datetime": local})
+
+
+@pytest.mark.parametrize(
+    ("local", "epoch"),
+    [
+        ("2026-11-12T17:30", 1794501000),  # CET, UTC+1
+        ("2026-11-12T17:30:15", 1794501015),
+        ("2026-07-01T12:00", 1782900000),  # CEST, UTC+2
+    ],
+)
+def test_to_epoch_reads_the_time_in_the_zone_of_the_profile(
+    client: TestClient, local: str, epoch: int
+) -> None:
+    assert client.put(URL, json=document()).status_code == 200
+
+    response = to_epoch(client, local)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"epoch": epoch}
+
+
+def test_to_epoch_gives_the_first_valid_instant_of_a_skipped_time(client: TestClient) -> None:
+    assert client.put(URL, json=document()).status_code == 200
+
+    # 02:30 on 2026-03-29 does not exist in Paris: the clock jumps from 02:00 CET to 03:00 CEST.
+    assert to_epoch(client, "2026-03-29T02:30").json() == {"epoch": 1774746000}  # 01:00 UTC
+
+
+def test_to_epoch_gives_the_first_occurrence_of_a_repeated_time(client: TestClient) -> None:
+    assert client.put(URL, json=document()).status_code == 200
+
+    # 02:30 on 2026-10-25 happens twice in Paris: first at UTC+2, then at UTC+1.
+    assert to_epoch(client, "2026-10-25T02:30").json() == {"epoch": 1792888200}  # 00:30 UTC
+
+
+def test_to_epoch_needs_a_stored_schedule(client: TestClient) -> None:
+    assert code_of(to_epoch(client, "2026-11-12T17:30"), 404) == "schedule_not_found"
+
+
+@pytest.mark.parametrize(
+    "local", ["2026-11-12", "2026-11-12T17:30Z", "2026-11-12T17:30+01:00", "soon"]
+)
+def test_to_epoch_refuses_anything_but_a_naive_local_time(client: TestClient, local: str) -> None:
+    assert client.put(URL, json=document()).status_code == 200
+
+    assert code_of(to_epoch(client, local), 422) == "invalid_request"
+
+
+def test_to_epoch_refuses_a_date_that_does_not_exist(client: TestClient) -> None:
+    assert client.put(URL, json=document()).status_code == 200
+
+    assert code_of(to_epoch(client, "2026-13-40T25:61"), 422) == "invalid_local_datetime"

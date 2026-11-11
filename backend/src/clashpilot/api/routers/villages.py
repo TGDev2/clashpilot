@@ -21,6 +21,7 @@ from clashpilot.ingest.export import ImportFormatError, parse_export
 from clashpilot.ingest.official_api import CocApiError, fetch_player, match_levels
 from clashpilot.ingest.state import RESOURCES, ManualState, SnapshotItem, VillageSnapshot
 from clashpilot.storage.db import open_db
+from clashpilot.storage.history import add_manual_history
 from clashpilot.storage.packs import load_effective_pack
 
 router = APIRouter(prefix="/api/villages", tags=["villages"])
@@ -612,7 +613,7 @@ def _manual_out(village_id: str, manual: ManualState, updated_at: int | None) ->
 def put_manual(
     request: Request, village_id: str, body: Annotated[dict[str, Any], Body()]
 ) -> ManualOut:
-    """Replace the typed-in state of a village (resources, builders, farm rates, events...)."""
+    """Replace the typed-in state of a village; each typed resource adds a row to its history."""
     try:
         manual = ManualState.model_validate(body)
     except ValidationError as error:
@@ -632,6 +633,7 @@ def put_manual(
             "body_json = excluded.body_json, updated_at = excluded.updated_at",
             (village_id, json.dumps(manual.model_dump(mode="json")), now),
         )
+        add_manual_history(connection, village_id, manual, now)
     return _manual_out(village_id, manual, now)
 
 

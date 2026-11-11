@@ -135,7 +135,7 @@ def _stored(row: sqlite3.Row) -> StoredPlan:
         body={"plan_id": row["plan_id"], **json.loads(row["body"])},
         explanations=json.loads(row["explanations"]),
         reliability=json.loads(row["reliability"]),
-        params=PlanParams(**json.loads(row["params"])),
+        params=PlanParams.from_json(json.loads(row["params"])),
         input_hash=row["input_hash"],
         snapshot_id=row["snapshot_id"],
         previous_plan_id=row["previous_plan_id"],

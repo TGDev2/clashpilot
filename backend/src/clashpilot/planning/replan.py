@@ -13,7 +13,9 @@ The plan posted on is kept without calling the engine:
 - after another event, if `input_hash` is the same.
 
 Otherwise the engine of the stored params runs with `reference` = that plan and the objective of
-the latest `priority_changed`, or the default objective with `perturbation` 0.5.
+the latest `priority_changed`, or the weights of the stored strategy (the default objective
+without strategy) with `perturbation` 0.5. The stored strategy, composition, goal and war windows
+are applied again to the new problem (E16); the event itself is checked on the bare problem.
 
 The report pairs the tasks of both plans by class `(data_id, to_level)`, then by rank (SPEC
 section 4, rule 2): an id first meets the same id, the others meet in instance order, so that a new
@@ -64,6 +66,8 @@ from clashpilot.planning.service import (
     engine,
     input_hash,
     planner_config,
+    strategy_objective,
+    with_strategy,
 )
 from clashpilot.planning.simulate import effective_cost, effective_duration, simulate
 
@@ -114,8 +118,11 @@ class Replanned:
     kept: bool
 
 
-def default_objective() -> Objective:
-    return dataclasses.replace(DEFAULT_OBJECTIVE, perturbation=REPLAN_PERTURBATION)
+def default_objective(params: PlanParams | None = None) -> Objective:
+    """The objective of a replanning without `priority_changed`: the weights of the plan's
+    strategy (the default ones without strategy) with a perturbation of 0.5."""
+    weights = DEFAULT_OBJECTIVE if params is None else strategy_objective(params)
+    return dataclasses.replace(weights, perturbation=REPLAN_PERTURBATION)
 
 
 def replan(
@@ -135,10 +142,11 @@ def replan(
         raise ReplanError(422, "future_event", "Un événement ne peut pas être daté dans le futur.")
     params = previous.params
     config = planner_config(overrides, params.profile)
-    carried = _carried(previous.body) if previous.same_snapshot else {}
+    carried = carried_jobs(previous.body) if previous.same_snapshot else {}
 
     before, known = compile_inputs(inputs, now, params.horizon_days, carried)
-    payload = _checked(event, before, known, inputs, previous)
+    base = default_objective(params)
+    payload = _checked(event, before, known, inputs, previous, base)
     recorded = JournalEntry(
         entry_id=max((e.entry_id for e in inputs.journal), default=0) + 1,
         type=event.type,
@@ -147,10 +155,11 @@ def replan(
         payload=payload,
     )
     after_inputs = dataclasses.replace(inputs, journal=(*inputs.journal, recorded))
-    problem, _ = compile_inputs(after_inputs, now, params.horizon_days, carried)
-    objective = objective_of(after_inputs.journal) or default_objective()
+    compiled, _ = compile_inputs(after_inputs, now, params.horizon_days, carried)
+    problem, _ = with_strategy(compiled, params)
+    objective = objective_of(after_inputs.journal) or base
 
-    reference = _plan_of(previous.body)
+    reference = stored_plan(previous.body)
     frozen = {job.task_id for job in problem.frozen}
     remaining = dataclasses.replace(
         reference, assignments=tuple(a for a in reference.assignments if a.task_id not in frozen)
@@ -192,7 +201,7 @@ def _keeps(
     return simulate(problem, remaining).valid
 
 
-def _carried(body: Row) -> dict[str, tuple[int, int]]:
+def carried_jobs(body: Row) -> dict[str, tuple[int, int]]:
     """`(start, lane_slot)` of every job the plan lists as frozen."""
     return {
         row["task_id"]: (int(row["start"]), int(row["lane_slot"]))
@@ -201,7 +210,7 @@ def _carried(body: Row) -> dict[str, tuple[int, int]]:
     }
 
 
-def _plan_of(body: Row) -> Plan:
+def stored_plan(body: Row) -> Plan:
     """The planned assignments of a stored plan, as the reference of the engine."""
     assignments = tuple(
         Assignment(row["task_id"], row["lane"], row["lane_slot"], row["start"], row["end"])
@@ -221,6 +230,7 @@ def _checked(
     known: Mapping[str, KnownJob],
     inputs: PlanInputs,
     previous: PreviousPlan,
+    base: Objective,
 ) -> dict[str, Any]:
     """The payload of `event`, or `ReplanError` when it cannot have happened."""
     tasks = {task.id: task for task in problem.tasks}
@@ -234,7 +244,7 @@ def _checked(
     if event.type == RESOURCES_CORRECTED:
         return {"resources": dict(sorted((event.resources or {}).items()))}
     if event.type == PRIORITY_CHANGED:
-        return {"objective": _weights(event, inputs.journal)}
+        return {"objective": _weights(event, inputs.journal, base)}
     if event.type == GAME_DATA_UPDATED:
         if event.pack_id != inputs.pack.pack_id:
             raise ReplanError(
@@ -382,7 +392,7 @@ def _item(
     return {"item": name, "effect": RUNE, "resource": rule.resource, "value": cap}
 
 
-def _weights(event: Event, journal: Sequence[JournalEntry]) -> dict[str, float]:
+def _weights(event: Event, journal: Sequence[JournalEntry], base: Objective) -> dict[str, float]:
     """The new weights over the current ones: a weight left out keeps its value."""
     given = dict(event.objective or {})
     names = {field.name for field in dataclasses.fields(Objective)}
@@ -391,7 +401,7 @@ def _weights(event: Event, journal: Sequence[JournalEntry]) -> dict[str, float]:
         raise ReplanError(422, "invalid_event", "Poids inconnu : " + ", ".join(unknown) + ".")
     if not all(math.isfinite(value) for value in given.values()):
         raise ReplanError(422, "invalid_event", "Chaque poids doit être un nombre fini.")
-    weights = dataclasses.asdict(objective_of(journal) or default_objective())
+    weights = dataclasses.asdict(objective_of(journal) or base)
     weights.update({name: float(value) for name, value in given.items()})
     return weights
 

@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "pack_id": "fictional-test-pack-forecast",
+  "game_version": "test-forecast-0",
+  "as_of": "2026-01-01",
+  "fictional": true,
+  "sources": [
+    {
+      "id": "s1",
+      "label": "Source fictive de test",
+      "url": "https://example.invalid/fictional-forecast-pack",
+      "retrieved_at": "2026-01-01",
+      "license": "CC0-1.0"
+    }
+  ],
+  "items": [
+    {
+      "data_id": 9100001,
+      "name": "Tour de prevision",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "town_hall",
+      "tags": ["town_hall"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9100002,
+      "name": "Hutte de prevision",
+      "kind": "building",
+      "village": "home",
+      "lane": "none",
+      "category": "builder_hut",
+      "tags": ["builder_hut"],
+      "max_count_by_th": {"1": 2}
+    },
+    {
+      "data_id": 9100003,
+      "name": "Canon de prevision",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "defense",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9100004,
+      "name": "Laboratoire de prevision",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "laboratory",
+      "tags": ["laboratory"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9100005,
+      "name": "Troupe de prevision",
+      "kind": "troop",
+      "village": "home",
+      "lane": "lab",
+      "category": "troop",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9100006,
+      "name": "Mur de prevision",
+      "kind": "wall",
+      "village": "home",
+      "lane": "builder",
+      "category": "wall",
+      "tags": ["instant_upgrade"],
+      "max_count_by_th": {"1": 4}
+    }
+  ],
+  "levels": [
+    {"data_id": 9100001, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9100002, "level": 1, "duration_s": 60, "cost": {}, "requires": [], "source": "s1"},
+    {"data_id": 9100003, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9100003, "level": 2, "duration_s": 10800, "cost": {"gold": 2000}, "requires": [], "source": "s1"},
+    {"data_id": 9100004, "level": 1, "duration_s": 60, "cost": {"elixir": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9100005, "level": 1, "duration_s": 60, "cost": {"elixir": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9100005, "level": 2, "duration_s": 7200, "cost": {"elixir": 10000}, "requires": [], "source": "s1"},
+    {"data_id": 9100006, "level": 1, "duration_s": 0, "cost": {"gold": 500}, "requires": [], "source": "s1"},
+    {"data_id": 9100006, "level": 2, "duration_s": 0, "cost": {"gold": 1000}, "requires": [], "source": "s1"},
+    {"data_id": 9100006, "level": 3, "duration_s": 0, "cost": {"gold": 2000}, "requires": [], "source": "s1"},
+    {"data_id": 9100006, "level": 4, "duration_s": 0, "cost": {"gold": 3000}, "requires": [], "source": "s1"},
+    {"data_id": 9100006, "level": 5, "duration_s": 0, "cost": {"gold": 4000}, "requires": [], "source": "s1"}
+  ],
+  "storage": [],
+  "rules": {}
+}

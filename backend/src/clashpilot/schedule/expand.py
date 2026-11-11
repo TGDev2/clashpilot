@@ -62,6 +62,15 @@ def _local_to_epoch(local: datetime, zone: ZoneInfo, fold: int) -> int:
     return _to_epoch(instant)
 
 
+def local_to_epoch(local: datetime, tz: str) -> int:
+    """Epoch of a naive local time in the IANA zone `tz`.
+
+    A time skipped by a clock change gives the first valid instant (the jump itself); a repeated
+    time gives its first occurrence.
+    """
+    return _local_to_epoch(local, ZoneInfo(tz), fold=0)
+
+
 def _normalized(spans: list[Interval], lower: int, upper: int) -> list[Interval]:
     """Clip `spans` to `[lower, upper)`, then sort them and merge what touches."""
     merged: list[Interval] = []
