@@ -9,11 +9,13 @@ const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = { left: 64, right: 12, top: 12, bottom: 24 };
 
-// One colour and one dash per income: the lines stay apart without colour vision.
+// One colour and one dash per income: the lines stay apart without colour vision. The colours are
+// dataviz categorical slots 2, 1 and 3 (dark steps), checked with validate_palette.js against the
+// card surface #111b1f: lightness band, chroma, CVD (worst 19.6), normal vision (20.9), contrast >= 3:1.
 const LINES: { key: Income; label: string; stroke: string; dash: string | undefined }[] = [
-  { key: "low", label: fr.forecast.low, stroke: "var(--color-unknown)", dash: "6 4" },
-  { key: "expected", label: fr.forecast.expected, stroke: "var(--color-signal)", dash: undefined },
-  { key: "high", label: fr.forecast.high, stroke: "var(--color-confirmed)", dash: "2 4" },
+  { key: "low", label: fr.forecast.low, stroke: "#d95926", dash: "6 4" },
+  { key: "expected", label: fr.forecast.expected, stroke: "#3987e5", dash: undefined },
+  { key: "high", label: fr.forecast.high, stroke: "#199e70", dash: "2 4" },
 ];
 
 /** The stock of one resource under the three incomes; the unknown points leave gaps in the lines. */
