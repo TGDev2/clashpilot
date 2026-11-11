@@ -306,6 +306,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/schedule/to-epoch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post To Epoch
+         * @description The UTC epoch of a local time, read in the zone of the stored profile (ADR-10).
+         *
+         *     A time skipped by a clock change gives the first valid instant, a repeated one its first
+         *     occurrence, so the browser never does the zone arithmetic.
+         */
+        post: operations["post_to_epoch_api_villages__village_id__schedule_to_epoch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/state": {
         parameters: {
             query?: never;
@@ -478,6 +501,11 @@ export interface components {
             default: string | null;
             /** Engines */
             engines: string[];
+        };
+        /** EpochOut */
+        EpochOut: {
+            /** Epoch */
+            epoch: number;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1102,6 +1130,14 @@ export interface components {
              * @enum {string}
              */
             type: "task_started";
+        };
+        /**
+         * ToEpochIn
+         * @description `local_datetime`: wall-clock time in the profile zone, `AAAA-MM-JJTHH:MM[:SS]`, no offset.
+         */
+        ToEpochIn: {
+            /** Local Datetime */
+            local_datetime: string;
         };
         /** UpgradedOut */
         UpgradedOut: {
@@ -2081,6 +2117,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_to_epoch_api_villages__village_id__schedule_to_epoch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToEpochIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EpochOut"];
+                };
+            };
+            /** @description Code schedule_not_found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code invalid_local_datetime. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
