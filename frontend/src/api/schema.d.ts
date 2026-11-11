@@ -325,6 +325,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scenarios
+         * @description The scenarios of the village, oldest first.
+         */
+        get: operations["get_scenarios_api_villages__village_id__scenarios_get"];
+        put?: never;
+        /**
+         * Post Scenario
+         * @description Compute a scenario on a copy of the latest plan's problem and store it.
+         */
+        post: operations["post_scenario_api_villages__village_id__scenarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/villages/{village_id}/scenarios/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Compare
+         * @description The figures of the latest real plan and of each scenario, in the order asked.
+         */
+        post: operations["post_compare_api_villages__village_id__scenarios_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/villages/{village_id}/scenarios/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Scenario
+         * @description Delete one scenario; no plan and no other table is touched.
+         */
+        delete: operations["delete_scenario_api_villages__village_id__scenarios__scenario_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/schedule": {
         parameters: {
             query?: never;
@@ -447,6 +511,21 @@ export interface components {
             /** Start Local */
             start_local: string;
         };
+        /**
+         * AbsenceIn
+         * @description An absence between two local date-times of the profile zone.
+         */
+        AbsenceIn: {
+            /** End Local */
+            end_local: string;
+            /** Start Local */
+            start_local: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "absence";
+        };
         /** ActionOut */
         ActionOut: {
             /**
@@ -513,6 +592,17 @@ export interface components {
             before: components["schemas"]["PlacementOut"] | null;
             /** Task Id */
             task_id: string;
+        };
+        /** CompareOut */
+        CompareOut: {
+            plan: components["schemas"]["PlanFiguresOut"];
+            /** Scenarios */
+            scenarios: components["schemas"]["ScenarioFiguresOut"][];
+        };
+        /** CompareRequest */
+        CompareRequest: {
+            /** Scenario Ids */
+            scenario_ids: number[];
         };
         /** ConflictOut */
         ConflictOut: {
@@ -944,6 +1034,26 @@ export interface components {
             /** Start */
             start: number;
         };
+        /** PlanFiguresOut */
+        PlanFiguresOut: {
+            /** Finished Count */
+            finished_count?: number | null;
+            /** Goal Finish */
+            goal_finish?: number | null;
+            /** Hero Unavailable S */
+            hero_unavailable_s?: number | null;
+            /** Idle Builder S */
+            idle_builder_s?: number | null;
+            /** Plan Id */
+            plan_id: number;
+            proof?: components["schemas"]["ProofOut"] | null;
+            /** Remaining Cost */
+            remaining_cost?: {
+                [key: string]: number;
+            } | null;
+            /** Value Gained */
+            value_gained?: number | null;
+        };
         /** PlanOut */
         PlanOut: {
             /** Assignments */
@@ -1005,6 +1115,26 @@ export interface components {
             strategy?: string | null;
             /** War Windows */
             war_windows?: components["schemas"]["WarWindow"][];
+        };
+        /**
+         * PolicyIn
+         * @description The login policy; a field left out keeps the profile's value.
+         */
+        PolicyIn: {
+            /** Max Logins Per Day */
+            max_logins_per_day?: number | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "strict" | "tolerance" | "progress" | "min_logins";
+            /** Tolerance Minutes */
+            tolerance_minutes?: number | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "policy";
         };
         /** PresenceOut */
         PresenceOut: {
@@ -1071,6 +1201,13 @@ export interface components {
             /** Value */
             value: number | null;
         };
+        /** ReasonOut */
+        ReasonOut: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /**
          * RecommendationsOut
          * @description What to do at the next login of the latest plan.
@@ -1093,6 +1230,16 @@ export interface components {
             proof: components["schemas"]["ProofOut"];
             /** Timezone */
             timezone: string;
+        };
+        /** ReducePlayIn */
+        ReducePlayIn: {
+            /** Max Logins Per Day */
+            max_logins_per_day: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "reduce_play";
         };
         /** Reliability */
         Reliability: {
@@ -1130,6 +1277,21 @@ export interface components {
             data_id: number;
             /** Level */
             level: number;
+        };
+        /**
+         * ReserveBuilderIn
+         * @description `count` builders fewer from now until the UTC epoch `until`.
+         */
+        ReserveBuilderIn: {
+            /** Count */
+            count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "reserve_builder";
+            /** Until */
+            until: number;
         };
         /**
          * ResourcesCorrectedIn
@@ -1192,6 +1354,88 @@ export interface components {
             expected: components["schemas"]["Estimate"];
             high: components["schemas"]["Estimate"];
             low: components["schemas"]["Estimate"];
+        };
+        /** ScenarioFiguresOut */
+        ScenarioFiguresOut: {
+            /** Finished Count */
+            finished_count?: number | null;
+            /** Goal Finish */
+            goal_finish?: number | null;
+            /** Hero Unavailable S */
+            hero_unavailable_s?: number | null;
+            /** Idle Builder S */
+            idle_builder_s?: number | null;
+            /** Name */
+            name: string;
+            proof?: components["schemas"]["ProofOut"] | null;
+            /** Remaining Cost */
+            remaining_cost?: {
+                [key: string]: number;
+            } | null;
+            /** Scenario Id */
+            scenario_id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "infeasible" | "unsupported";
+            /** Value Gained */
+            value_gained?: number | null;
+        };
+        /**
+         * ScenarioOut
+         * @description `assignments` and `proof` are empty for a scenario that is not `ok`.
+         */
+        ScenarioOut: {
+            /** Assignments */
+            assignments: components["schemas"]["AssignmentOut"][];
+            /** Engine */
+            engine: string;
+            /** Horizon End */
+            horizon_end: number;
+            /** Name */
+            name: string;
+            /** Now */
+            now: number;
+            /** Overlays */
+            overlays: {
+                [key: string]: unknown;
+            }[];
+            /** Plan Id */
+            plan_id: number | null;
+            /**
+             * Profile
+             * @enum {string}
+             */
+            profile: "fast" | "repro";
+            proof: components["schemas"]["ProofOut"] | null;
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /** Scenario Id */
+            scenario_id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "infeasible" | "unsupported";
+            /** Timezone */
+            timezone: string;
+            /** Warnings */
+            warnings: string[];
+        };
+        /**
+         * ScenarioRequest
+         * @description Without `engine` and `profile`, the defaults of `POST plans` (profile `fast`).
+         */
+        ScenarioRequest: {
+            /** Engine */
+            engine?: string | null;
+            /** Name */
+            name: string;
+            /** Overlays */
+            overlays: (components["schemas"]["StartNowIn"] | components["schemas"]["ReserveBuilderIn"] | components["schemas"]["AbsenceIn"] | components["schemas"]["PolicyIn"] | components["schemas"]["StrategyIn"] | components["schemas"]["ReducePlayIn"] | components["schemas"]["UseItemIn"])[];
+            /** Profile */
+            profile?: ("fast" | "repro") | null;
         };
         /** ScheduleChangedIn */
         ScheduleChangedIn: {
@@ -1287,10 +1531,33 @@ export interface components {
             /** Url */
             url: string | null;
         };
+        /**
+         * StartNowIn
+         * @description Start `task_id` at the earliest instant the simulator accepts.
+         */
+        StartNowIn: {
+            /** Task Id */
+            task_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "start_now";
+        };
         /** StrategiesOut */
         StrategiesOut: {
             /** Strategies */
             strategies: components["schemas"]["StrategyOut"][];
+        };
+        /** StrategyIn */
+        StrategyIn: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "strategy";
         };
         /** StrategyOut */
         StrategyOut: {
@@ -1382,6 +1649,23 @@ export interface components {
             name: string | null;
             /** To Level */
             to_level: number;
+        };
+        /**
+         * UseItemIn
+         * @description Use `item` (a rule key of the active pack) at the UTC epoch `at`, on `task_id` if any.
+         */
+        UseItemIn: {
+            /** At */
+            at: number;
+            /** Item */
+            item: string;
+            /** Task Id */
+            task_id?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "use_item";
         };
         /** ValidationError */
         ValidationError: {
@@ -2349,6 +2633,191 @@ export interface operations {
                 };
             };
             /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scenarios_api_villages__village_id__scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioOut"][];
+                };
+            };
+            /** @description Code village_not_found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_scenario_api_villages__village_id__scenarios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScenarioOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy or invalid_request. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_compare_api_villages__village_id__scenarios_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompareOut"];
+                };
+            };
+            /** @description Code village_not_found, no_plan or scenario_not_found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy or invalid_request. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_scenario_api_villages__village_id__scenarios__scenario_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+                scenario_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Code scenario_not_found. */
             404: {
                 headers: {
                     [name: string]: unknown;
