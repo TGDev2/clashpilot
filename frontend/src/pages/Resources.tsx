@@ -26,6 +26,17 @@ function EstimateCell({ estimate }: { estimate: Estimate }) {
   return <span className="font-mono">{formatNumber(Math.round(estimate.value))}</span>;
 }
 
+function hasUnknown(points: readonly Point[]): boolean {
+  return points.some((point) =>
+    INCOMES.some((income) => {
+      const estimate = point[income];
+      return (
+        estimate.status === "unknown" || estimate.value === null || estimate.value === undefined
+      );
+    }),
+  );
+}
+
 function costText(cost: Record<string, number>): string {
   return Object.entries(cost)
     .map(([resource, amount]) => `${resourceLabel(resource)} ${formatNumber(amount)}`)
@@ -42,13 +53,13 @@ function SeriesSection({
   timezone: string;
 }) {
   const label = resourceLabel(resource);
-  const known = points.some((point) =>
-    INCOMES.some((income) => point[income].status === "estimated"),
-  );
+  // The real API always gives the first point (the stock now) and leaves the rest unknown without a
+  // farm rate: a section holding any unknown value is not marked Estimé.
+  const unknown = hasUnknown(points);
   return (
     <Section title={label}>
       <div>
-        <ProvenanceBadge status={known ? "estimated" : "unknown"} />
+        <ProvenanceBadge status={unknown ? "unknown" : "estimated"} />
       </div>
       <StockChart points={points} title={fr.forecast.seriesAlt(label)} />
       <div className="overflow-x-auto">
@@ -194,11 +205,7 @@ export function Resources() {
     villageId,
   );
   const data = forecast.data;
-  const everythingUnknown =
-    data !== undefined &&
-    Object.values(data.series).every((points) =>
-      points.every((point) => INCOMES.every((income) => point[income].status === "unknown")),
-    );
+  const missingFarmRate = data !== undefined && Object.values(data.series).some(hasUnknown);
   return (
     <>
       <PageTitle>{fr.forecast.title}</PageTitle>
@@ -208,7 +215,7 @@ export function Resources() {
           <p className="text-mist">{fr.forecast.loadingHint}</p>
         )}
         <ProblemNotice problem={forecast.problem} />
-        {everythingUnknown && (
+        {missingFarmRate && (
           <p className="text-sm text-mist">
             {fr.forecast.unknownHint}{" "}
             <Link href="/importer#saisie" className="text-signal underline underline-offset-2">
