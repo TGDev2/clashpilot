@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "strategies": {
+    "balanced": {
+      "label": "Équilibrée",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "offense": {
+      "label": "Attaque",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {"army": 1.5, "troop": 1.5, "spell": 1.5, "siege": 1.5, "hero": 1.5, "pet": 1.3, "equipment": 1.3},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "defense": {
+      "label": "Défense",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {"defense": 1.5, "trap": 1.3, "wall": 1.2},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "th_rush": {
+      "label": "Course à l'Hôtel de Ville",
+      "weights": {"value": 1.0, "idle": 0.3, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {},
+      "tag_multipliers": {"town_hall": 3.0},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "heroes": {
+      "label": "Héros d'abord",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {"hero": 2.0, "pet": 1.3, "equipment": 1.3},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "war_cwl": {
+      "label": "Guerre et ligue de clans",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {"army": 1.2, "troop": 1.2, "spell": 1.2},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": ["war_windows"]
+    },
+    "low_play": {
+      "label": "Peu de connexions",
+      "weights": {"value": 1.0, "idle": 0.05, "night": 0.2, "logins": 2.0, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "resources": {
+      "label": "Économie de ressources",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 2.0, "preferred": 0.1},
+      "category_multipliers": {"resource": 1.3},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": []
+    },
+    "finish_th": {
+      "label": "Finir l'Hôtel de Ville",
+      "weights": {"value": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": ["town_hall_last"]
+    },
+    "custom_goal": {
+      "label": "Objectif personnalisé",
+      "weights": {"value": 1.0, "goal": 1.0, "idle": 0.1, "night": 0.2, "logins": 0.05, "spill": 0.1, "preferred": 0.1},
+      "category_multipliers": {},
+      "tag_multipliers": {},
+      "composition_multiplier": 1.5,
+      "constraints": ["goal"]
+    }
+  }
+}

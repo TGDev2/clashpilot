@@ -11,6 +11,10 @@ objective, the engine, the profile and the seed.
 
 The inputs carry the journal of the village (E11): the problem is compiled from the export and the
 whole journal, and the objective is the one of the latest `priority_changed`, if any.
+
+A plan may name a strategy (E16), with an army composition, a goal and war windows: they are part
+of the stored params, and `apply_strategy` turns the compiled problem and the objective into the
+strategy's at every computation. A `priority_changed` still wins over the strategy's weights.
 """
 
 from __future__ import annotations
@@ -18,9 +22,9 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import ManualState, VillageSnapshot
@@ -31,6 +35,7 @@ from clashpilot.planning.model import Decision, Plan, Problem
 from clashpilot.planning.objective import Objective, score
 from clashpilot.planning.registry import PLANNERS, Planner, PlannerConfig
 from clashpilot.planning.simulate import SimResult, Violation, simulate
+from clashpilot.planning.strategies import apply_strategy, goal_of, load_strategies
 from clashpilot.schedule.profile import ScheduleProfile
 
 Profile = Literal["fast", "repro"]
@@ -48,6 +53,21 @@ class UnknownEngineError(LookupError):
     def __init__(self, engine: str) -> None:
         super().__init__(f"unknown engine: {engine}")
         self.engine = engine
+
+
+class UnknownStrategyError(LookupError):
+    def __init__(self, strategy: str) -> None:
+        super().__init__(f"unknown strategy: {strategy}")
+        self.strategy = strategy
+
+
+class InvalidGoalError(ValueError):
+    """The goal names a level the active pack has no row for."""
+
+    def __init__(self, data_id: int, level: int) -> None:
+        super().__init__(f"no pack row for goal {data_id} level {level}")
+        self.data_id = data_id
+        self.level = level
 
 
 class InvalidPlanError(RuntimeError):
@@ -76,6 +96,26 @@ class PlanParams:
     horizon_days: int
     engine: str
     profile: Profile
+    strategy: str | None = None
+    composition: tuple[int, ...] = ()
+    goal: tuple[int, int] | None = None  # (data_id, level)
+    war_windows: tuple[tuple[int, int], ...] = ()  # (start, end) UTC epochs
+
+    @classmethod
+    def from_json(cls, document: Mapping[str, Any]) -> Self:
+        """The params stored as JSON; a plan stored before E16 has no strategy."""
+        goal = document.get("goal")
+        return cls(
+            horizon_days=int(document["horizon_days"]),
+            engine=str(document["engine"]),
+            profile=document["profile"],
+            strategy=document.get("strategy"),
+            composition=tuple(int(data_id) for data_id in document.get("composition", ())),
+            goal=None if goal is None else (int(goal[0]), int(goal[1])),
+            war_windows=tuple(
+                (int(start), int(end)) for start, end in document.get("war_windows", ())
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -94,18 +134,67 @@ class PlanOutcome:
 
 
 def resolve_params(
-    horizon_days: int | None, engine: str | None, profile: Profile | None
+    horizon_days: int | None,
+    engine: str | None,
+    profile: Profile | None,
+    *,
+    strategy: str | None = None,
+    composition: Sequence[int] = (),
+    goal: tuple[int, int] | None = None,
+    war_windows: Sequence[tuple[int, int]] = (),
 ) -> PlanParams:
-    """The SPEC defaults: `auto` if registered else `rollout`, profile `fast`, 90 days."""
+    """The SPEC defaults: `auto` if registered else `rollout`, profile `fast`, 90 days.
+
+    Raises `UnknownEngineError` and `UnknownStrategyError`.
+    """
     if engine is None:
         engine = AUTO_ENGINE if AUTO_ENGINE in PLANNERS else FALLBACK_ENGINE
     if engine not in PLANNERS:
         raise UnknownEngineError(engine)
+    if strategy is not None and strategy not in load_strategies():
+        raise UnknownStrategyError(strategy)
     return PlanParams(
         horizon_days=DEFAULT_HORIZON_DAYS if horizon_days is None else horizon_days,
         engine=engine,
         profile=DEFAULT_PROFILE if profile is None else profile,
+        strategy=strategy,
+        composition=tuple(composition),
+        goal=goal,
+        war_windows=tuple(sorted(war_windows)),
     )
+
+
+def strategy_objective(params: PlanParams) -> Objective:
+    """The weights of the plan's strategy, or the default objective without strategy."""
+    if params.strategy is None:
+        return DEFAULT_OBJECTIVE
+    strategies = load_strategies()
+    if params.strategy not in strategies:
+        raise UnknownStrategyError(params.strategy)
+    return strategies[params.strategy].objective()
+
+
+def with_strategy(problem: Problem, params: PlanParams) -> tuple[Problem, Objective]:
+    """The compiled problem and the objective as the plan's strategy sees them."""
+    if params.strategy is None:
+        return problem, DEFAULT_OBJECTIVE
+    strategies = load_strategies()
+    if params.strategy not in strategies:
+        raise UnknownStrategyError(params.strategy)
+    goal = None if params.goal is None else goal_of(problem, *params.goal)
+    return apply_strategy(
+        problem,
+        strategies[params.strategy],
+        params.composition,
+        goal=goal,
+        war_windows=params.war_windows,
+    )
+
+
+def check_goal(pack: GamePack, params: PlanParams) -> None:
+    """Raise `InvalidGoalError` when the goal names a level the pack has no row for."""
+    if params.goal is not None and pack.level(*params.goal) is None:
+        raise InvalidGoalError(*params.goal)
 
 
 def planner_config(overrides: Mapping[str, Any], profile: Profile) -> PlannerConfig:
@@ -222,10 +311,13 @@ def create_plan(
 ) -> PlanOutcome:
     """Compile, solve, judge and describe a plan.
 
-    Raises `MissingInputError` (from `compile_problem`) and `InvalidPlanError`.
+    Raises `InvalidGoalError`, `UnknownStrategyError`, `MissingInputError` (from
+    `compile_problem`) and `InvalidPlanError`.
     """
-    problem, _ = compile_inputs(inputs, now, params.horizon_days)
-    objective = objective_of(inputs.journal) or DEFAULT_OBJECTIVE
+    check_goal(inputs.pack, params)
+    compiled, _ = compile_inputs(inputs, now, params.horizon_days)
+    problem, weights = with_strategy(compiled, params)
+    objective = objective_of(inputs.journal) or weights
     config = planner_config(overrides, params.profile)
     plan = engine(params.engine).solve(problem, objective, config)
     return describe(inputs, params, problem, plan, objective, config, now)
@@ -290,6 +382,12 @@ def describe(
             for excluded in problem.excluded
         ],
         "warnings": warnings,
+        "strategy": params.strategy,
+        "composition": list(params.composition),
+        "goal": None
+        if params.goal is None
+        else {"data_id": params.goal[0], "level": params.goal[1]},
+        "war_windows": [{"start": start, "end": end} for start, end in params.war_windows],
     }
     resources = {
         name: (typed.status, typed.as_of) for name, typed in inputs.manual.resources.items()

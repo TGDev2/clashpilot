@@ -6,7 +6,8 @@ accrues continuously and what goes over the cap is lost and counted. Pure module
 instant come from the problem and the plan.
 
 A frozen job occupies its lane and satisfies `requires`, but the rules about starts and ends
-(availability, sleep, tolerance, past start, logins) only judge the assignments of the plan.
+(availability, sleep, tolerance, past start, logins, hero windows) only judge the assignments of
+the plan.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from clashpilot.schedule.expand import AvailabilityCalendar
 
 SCALE = 3600  # stock units per resource unit
 DAY_S = 86_400
+HERO_TAG = "hero"
 
 Interval = tuple[int, int]
 Accepted = tuple[Assignment, Task]
@@ -88,6 +90,13 @@ def effective_cost(problem: Problem, task: Task, start: int) -> dict[str, int]:
     return cost
 
 
+def hero_blocked(problem: Problem, task: Task, start: int, end: int) -> bool:
+    """Does `task`, a hero upgrade running over `[start, end)`, overlap a hero blackout window?"""
+    if HERO_TAG not in task.tags:
+        return False
+    return any(min(end, high) > max(start, low) for low, high in problem.hero_blackouts)
+
+
 # --------------------------------------------------------------------------- calendar helpers
 
 
@@ -151,10 +160,12 @@ def _timing_violations(problem: Problem, accepted: Sequence[Accepted]) -> list[V
     calendar, policy = problem.calendar, problem.policy
     bounds = _boundaries(calendar) if policy.mode == "tolerance" else []
     violations: list[Violation] = []
-    for assignment, _ in accepted:
+    for assignment, task in accepted:
         name, start, end = assignment.task_id, assignment.start, assignment.end
         if start < problem.now:
             violations.append(Violation("past_start", name, start))
+        if hero_blocked(problem, task, start, end):
+            violations.append(Violation("hero_unavailable", name, start))
         if not calendar.can_act(start):
             violations.append(Violation("start_outside_availability", name, start))
         if policy.mode == "strict" and calendar.is_sleep(end):

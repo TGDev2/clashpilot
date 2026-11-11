@@ -38,7 +38,13 @@ from clashpilot.planning.heuristics.rollout import RolloutPlanner, replay_trace
 from clashpilot.planning.model import Assignment, Plan, Problem, Proof, Task
 from clashpilot.planning.objective import Objective, score
 from clashpilot.planning.registry import PlannerConfig
-from clashpilot.planning.simulate import SCALE, effective_cost, effective_duration, simulate
+from clashpilot.planning.simulate import (
+    SCALE,
+    effective_cost,
+    effective_duration,
+    hero_blocked,
+    simulate,
+)
 
 ENGINE = "cpsat"
 DAY_S = 86_400
@@ -341,7 +347,7 @@ class _Builder:
         start = self.slot_start(slot)
         duration = effective_duration(self.problem, task, start)
         end = start + duration
-        if not self.state.end_allowed(end):
+        if not self.state.end_allowed(end) or hero_blocked(self.problem, task, start, end):
             return None
         return _Candidate(
             task=task,

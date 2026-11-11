@@ -28,7 +28,14 @@ from zoneinfo import ZoneInfo
 from clashpilot.planning.model import Assignment, Decision, Plan, Problem, Proof, Task
 from clashpilot.planning.objective import Objective, score
 from clashpilot.planning.registry import PlannerConfig
-from clashpilot.planning.simulate import SCALE, effective_cost, effective_duration, simulate
+from clashpilot.planning.simulate import (
+    HERO_TAG,
+    SCALE,
+    effective_cost,
+    effective_duration,
+    hero_blocked,
+    simulate,
+)
 
 ENGINE = "baseline"
 INVALID_PLAN_WARNING = "heuristic_invalid_plan"
@@ -149,6 +156,8 @@ class State:
                 slots[job.lane_slot] = max(slots[job.lane_slot], job.end)
         for modifier in problem.modifiers:
             events.update((modifier.start, modifier.end))
+        # A hero upgrade held back by a war window may start when the window closes.
+        events.update(high for _, high in problem.hero_blackouts)
         self.events = sorted(events)
         calendar = problem.calendar
         spans = (*calendar.sleep, *calendar.work, *calendar.absence, *calendar.available)
@@ -253,7 +262,8 @@ class State:
             return False
         if not problem.calendar.can_act(start):
             return False
-        if not self.end_allowed(start + self.duration_of(task, start)):
+        end = start + self.duration_of(task, start)
+        if not self.end_allowed(end) or hero_blocked(problem, task, start, end):
             return False
         return self.login_allowed(start)
 
@@ -286,6 +296,8 @@ class State:
         for bound in self.bounds:
             instants.update((bound, bound - duration, bound - tolerance - duration))
         instants.update(self.events)
+        if HERO_TAG in task.tags:
+            instants.update(low - duration for low, _ in problem.hero_blackouts)
         if problem.policy.max_logins_per_day is not None:
             instants.add(self.next_local_day(t))
         for start in sorted(instant for instant in instants if instant >= t):
