@@ -91,7 +91,8 @@ function projectLanes() {
     },
     {
       name: 'frontend',
-      command: 'npm run lint && npm run typecheck && npm run test && npm run build',
+      command:
+        'npm run lint && npm run typecheck && npm run test && npm run build && node ../scripts/gen-api.mjs --check',
       cwd: FRONTEND,
     },
   ];

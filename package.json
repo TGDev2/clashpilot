@@ -11,6 +11,7 @@
     "setup": "node scripts/setup.mjs",
     "verify": "node scripts/verify.mjs",
     "test:slow": "node scripts/test-slow.mjs",
+    "gen-api": "node scripts/gen-api.mjs",
     "e2e": "node scripts/e2e.mjs",
     "verify:full": "npm run verify && npm run test:slow && npm run e2e",
     "dev": "node scripts/run-with-settings.mjs --with-vite uvicorn clashpilot.api.app:create_app --factory --reload",
