@@ -56,5 +56,9 @@ describe("Ressources avec un taux de collecte partiel", () => {
     expect(elixir?.textContent).not.toContain("Inconnu");
     expect(document.querySelector('a[href="/importer#saisie"]')).not.toBeNull();
     expect(within(gold as HTMLElement).getAllByRole("row")).toHaveLength(3);
+    // One known point is no line: no empty chart for gold, a drawn one for elixir.
+    expect(gold?.querySelector("svg [data-series]")).toBeNull();
+    expect(gold?.querySelector("svg")).toBeNull();
+    expect(elixir?.querySelector('svg [data-series="expected"]')).not.toBeNull();
   });
 });

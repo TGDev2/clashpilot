@@ -23,7 +23,12 @@ export function StockChart({ points, title }: { points: readonly Point[]; title:
   const values = points.flatMap((point) =>
     LINES.map((line) => point[line.key].value).filter((value): value is number => value != null),
   );
-  if (values.length === 0 || points.length === 0) {
+  // A line needs two known points: with a single one (the stock now, before any farm rate) the
+  // chart would be an empty frame, and the table says everything.
+  const drawable = LINES.some(
+    (line) => points.filter((point) => point[line.key].value != null).length >= 2,
+  );
+  if (!drawable) {
     return null;
   }
   const lo = Math.min(...values);
