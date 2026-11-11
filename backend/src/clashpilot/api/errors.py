@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -16,28 +16,44 @@ _DEFAULT_CODES = {
 }
 
 
-def error_detail(code: str, message: str, errors: Sequence[str] | None = None) -> dict[str, Any]:
+def error_detail(
+    code: str,
+    message: str,
+    errors: Sequence[str] | None = None,
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     detail: dict[str, Any] = {"code": code, "message": message}
     if errors is not None:
         detail["errors"] = list(errors)
+    if extra is not None:
+        detail.update(extra)
     return detail
 
 
 class ApiError(Exception):
-    """An error answered as `{"detail": {"code", "message"[, "errors"]}}` (SPEC section 4)."""
+    """An error answered as `{"detail": {"code", "message"[, "errors"]}}` (SPEC section 4).
+
+    `extra` adds fields of its own to the detail, such as `missing` for `missing_input`.
+    """
 
     def __init__(
-        self, status: int, code: str, message: str, errors: Sequence[str] | None = None
+        self,
+        status: int,
+        code: str,
+        message: str,
+        errors: Sequence[str] | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(f"{code}: {message}")
         self.status = status
         self.code = code
         self.message = message
         self.errors = list(errors) if errors is not None else None
+        self.extra = dict(extra) if extra is not None else None
 
 
 async def _api_error_handler(_request: Request, exc: ApiError) -> JSONResponse:
-    detail = error_detail(exc.code, exc.message, exc.errors)
+    detail = error_detail(exc.code, exc.message, exc.errors, exc.extra)
     return JSONResponse({"detail": detail}, status_code=exc.status)
 
 
