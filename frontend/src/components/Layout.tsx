@@ -8,7 +8,10 @@ const LINKS = [
   { to: "/maintenant", label: fr.nav.now },
   { to: "/calendrier", label: fr.nav.calendar },
   { to: "/constructeurs", label: fr.nav.builders },
+  { to: "/strategie", label: fr.nav.strategy },
+  { to: "/ressources", label: fr.nav.resources },
   { to: "/scenarios", label: fr.nav.scenarios },
+  { to: "/objets", label: fr.nav.items },
   { to: "/historique", label: fr.nav.history },
   { to: "/reglages", label: fr.nav.settings },
 ] as const;

@@ -8,13 +8,16 @@ import { Dashboard } from "./pages/Dashboard";
 import { Gantt } from "./pages/Gantt";
 import { History } from "./pages/History";
 import { Import } from "./pages/Import";
+import { LevelSheet } from "./pages/LevelSheet";
+import { MagicItems } from "./pages/MagicItems";
 import { NowPage } from "./pages/NowPage";
 import { Placeholder } from "./pages/Placeholder";
+import { Resources } from "./pages/Resources";
+import { Scenarios } from "./pages/Scenarios";
 import { Settings } from "./pages/Settings";
+import { Strategy } from "./pages/Strategy";
 import { TaskSheet } from "./pages/TaskSheet";
 import { VillageProvider } from "./state/village";
-
-const PLACEHOLDERS = [{ path: "scenarios", title: fr.nav.scenarios }] as const;
 
 /** Lets react-aria links navigate through the router instead of reloading the page. */
 function AriaRouter({ children }: { children: ReactNode }) {
@@ -44,13 +47,11 @@ export function App() {
               <Route path="calendrier" element={<Calendar />} />
               <Route path="constructeurs" element={<Gantt />} />
               <Route path="taches/:taskId" element={<TaskSheet />} />
-              {PLACEHOLDERS.map((page) => (
-                <Route
-                  key={page.path}
-                  path={page.path}
-                  element={<Placeholder title={page.title} />}
-                />
-              ))}
+              <Route path="strategie" element={<Strategy />} />
+              <Route path="ressources" element={<Resources />} />
+              <Route path="scenarios" element={<Scenarios />} />
+              <Route path="objets" element={<MagicItems />} />
+              <Route path="donnees/:packId/:dataId/:level" element={<LevelSheet />} />
               <Route path="*" element={<Placeholder title={fr.nav.dashboard} />} />
             </Route>
           </Routes>
