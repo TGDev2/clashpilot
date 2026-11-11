@@ -44,3 +44,44 @@ body {
     scroll-behavior: smooth;
   }
 }
+
+/*
+ * Gantt fills: each status or band has its own pattern as well as its own colour, so it reads
+ * without colour vision (running = solid with diagonal hatching, planned = dashed outline, sleep =
+ * horizontal lines, absence = cross-hatching). The legend names each one.
+ */
+.gantt-frozen {
+  border: 1px solid var(--color-confirmed);
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-confirmed) 55%, transparent) 0 4px,
+    color-mix(in srgb, var(--color-confirmed) 25%, transparent) 4px 8px
+  );
+}
+
+.gantt-planned {
+  border: 1px dashed var(--color-signal);
+  background: color-mix(in srgb, var(--color-signal) 22%, transparent);
+}
+
+.gantt-sleep {
+  background: repeating-linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--color-mist) 22%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+.gantt-absence {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--color-unknown) 28%, transparent) 0 2px,
+      transparent 2px 8px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--color-unknown) 28%, transparent) 0 2px,
+      transparent 2px 8px
+    );
+}

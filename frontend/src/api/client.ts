@@ -14,6 +14,14 @@ export type PlanOut = components["schemas"]["PlanOut"];
 export type RecommendationsOut = components["schemas"]["RecommendationsOut"];
 export type ActionOut = components["schemas"]["ActionOut"];
 export type ProofOut = components["schemas"]["ProofOut"];
+export type AssignmentOut = components["schemas"]["AssignmentOut"];
+type PreviewSchema = components["schemas"]["SchedulePreview"];
+/** As the client hands it over: each window is a `[start, end]` pair of UTC epochs, typed loosely. */
+export type SchedulePreview = {
+  [K in keyof PreviewSchema]: PreviewSchema[K] extends [number, number][]
+    ? number[][]
+    : PreviewSchema[K];
+};
 
 let client: ReturnType<typeof createClient<paths>> | undefined;
 

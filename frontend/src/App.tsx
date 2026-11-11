@@ -3,16 +3,17 @@ import { RouterProvider } from "react-aria-components";
 import { BrowserRouter, Route, Routes, useHref, useNavigate } from "react-router";
 import { Layout } from "./components/Layout";
 import { fr } from "./i18n/fr";
+import { Calendar } from "./pages/Calendar";
 import { Dashboard } from "./pages/Dashboard";
+import { Gantt } from "./pages/Gantt";
 import { Import } from "./pages/Import";
 import { NowPage } from "./pages/NowPage";
 import { Placeholder } from "./pages/Placeholder";
 import { Settings } from "./pages/Settings";
+import { TaskSheet } from "./pages/TaskSheet";
 import { VillageProvider } from "./state/village";
 
 const PLACEHOLDERS = [
-  { path: "calendrier", title: fr.nav.calendar },
-  { path: "constructeurs", title: fr.nav.builders },
   { path: "scenarios", title: fr.nav.scenarios },
   { path: "historique", title: fr.nav.history },
 ] as const;
@@ -41,6 +42,9 @@ export function App() {
               <Route path="importer" element={<Import />} />
               <Route path="maintenant" element={<NowPage />} />
               <Route path="reglages" element={<Settings />} />
+              <Route path="calendrier" element={<Calendar />} />
+              <Route path="constructeurs" element={<Gantt />} />
+              <Route path="taches/:taskId" element={<TaskSheet />} />
               {PLACEHOLDERS.map((page) => (
                 <Route
                   key={page.path}
