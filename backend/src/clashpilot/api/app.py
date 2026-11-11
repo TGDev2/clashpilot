@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 
 from clashpilot.api.errors import error_detail, register_error_handlers
 from clashpilot.api.routers import (
+    calendar,
     forecast,
     gamedata,
     items,
@@ -86,6 +87,7 @@ def create_app(
     app.include_router(villages.router)
     app.include_router(schedule.router)
     app.include_router(plans.router)
+    app.include_router(calendar.router)
     app.include_router(forecast.router)
     app.include_router(scenarios.router)
     app.include_router(items.router)
