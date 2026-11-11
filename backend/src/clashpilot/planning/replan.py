@@ -142,7 +142,7 @@ def replan(
         raise ReplanError(422, "future_event", "Un événement ne peut pas être daté dans le futur.")
     params = previous.params
     config = planner_config(overrides, params.profile)
-    carried = _carried(previous.body) if previous.same_snapshot else {}
+    carried = carried_jobs(previous.body) if previous.same_snapshot else {}
 
     before, known = compile_inputs(inputs, now, params.horizon_days, carried)
     base = default_objective(params)
@@ -159,7 +159,7 @@ def replan(
     problem, _ = with_strategy(compiled, params)
     objective = objective_of(after_inputs.journal) or base
 
-    reference = _plan_of(previous.body)
+    reference = stored_plan(previous.body)
     frozen = {job.task_id for job in problem.frozen}
     remaining = dataclasses.replace(
         reference, assignments=tuple(a for a in reference.assignments if a.task_id not in frozen)
@@ -201,7 +201,7 @@ def _keeps(
     return simulate(problem, remaining).valid
 
 
-def _carried(body: Row) -> dict[str, tuple[int, int]]:
+def carried_jobs(body: Row) -> dict[str, tuple[int, int]]:
     """`(start, lane_slot)` of every job the plan lists as frozen."""
     return {
         row["task_id"]: (int(row["start"]), int(row["lane_slot"]))
@@ -210,7 +210,7 @@ def _carried(body: Row) -> dict[str, tuple[int, int]]:
     }
 
 
-def _plan_of(body: Row) -> Plan:
+def stored_plan(body: Row) -> Plan:
     """The planned assignments of a stored plan, as the reference of the engine."""
     assignments = tuple(
         Assignment(row["task_id"], row["lane"], row["lane_slot"], row["start"], row["end"])

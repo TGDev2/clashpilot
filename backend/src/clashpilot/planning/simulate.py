@@ -54,6 +54,18 @@ class SimMetrics:
 
 
 @dataclass(frozen=True)
+class Purchase:
+    """A payment outside the lanes at `at` (a wall bought with the excess, E17).
+
+    It takes no lane, no duration and no login: only the stock pays it, after the tasks starting
+    at the same instant. An uncovered purchase is an `insufficient_funds` without task id.
+    """
+
+    at: int
+    cost: Mapping[str, int]
+
+
+@dataclass(frozen=True)
 class SimResult:
     valid: bool
     violations: tuple[Violation, ...]
@@ -105,12 +117,12 @@ def _contains(intervals: Sequence[Interval], t: int) -> bool:
     return index >= 0 and t < intervals[index][1]
 
 
-def _boundaries(calendar: AvailabilityCalendar) -> list[int]:
+def calendar_bounds(calendar: AvailabilityCalendar) -> list[int]:
     spans = (*calendar.sleep, *calendar.work, *calendar.absence, *calendar.available)
     return sorted({bound for span in spans for bound in span})
 
 
-def _next_can_act(calendar: AvailabilityCalendar, bounds: Sequence[int], t: int) -> int:
+def next_can_act(calendar: AvailabilityCalendar, bounds: Sequence[int], t: int) -> int:
     """First instant at or after `t` where the player can act.
 
     `can_act` only changes at an interval bound, and holds after the last one.
@@ -158,7 +170,7 @@ def _screen(problem: Problem, plan: Plan) -> tuple[list[Accepted], list[Violatio
 
 def _timing_violations(problem: Problem, accepted: Sequence[Accepted]) -> list[Violation]:
     calendar, policy = problem.calendar, problem.policy
-    bounds = _boundaries(calendar) if policy.mode == "tolerance" else []
+    bounds = calendar_bounds(calendar) if policy.mode == "tolerance" else []
     violations: list[Violation] = []
     for assignment, task in accepted:
         name, start, end = assignment.task_id, assignment.start, assignment.end
@@ -171,7 +183,7 @@ def _timing_violations(problem: Problem, accepted: Sequence[Accepted]) -> list[V
         if policy.mode == "strict" and calendar.is_sleep(end):
             violations.append(Violation("end_in_sleep", name, end))
         if policy.mode == "tolerance":
-            wait = _next_can_act(calendar, bounds, end) - end
+            wait = next_can_act(calendar, bounds, end) - end
             if wait > policy.tolerance_s:
                 violations.append(Violation("idle_beyond_tolerance", name, end, str(wait)))
     return violations
@@ -313,7 +325,7 @@ class _Ledger:
 
 
 def _funds(
-    problem: Problem, accepted: Sequence[Accepted]
+    problem: Problem, accepted: Sequence[Accepted], purchases: Sequence[Purchase] = ()
 ) -> tuple[list[Violation], _Ledger, tuple[tuple[int, Mapping[str, int]], ...]]:
     model = problem.resources
     now = problem.now
@@ -322,6 +334,7 @@ def _funds(
         | set(model.cap)
         | set(model.income_per_hour)
         | {name for _, task in accepted for name in task.cost}
+        | {name for purchase in purchases for name in purchase.cost}
     )
     caps: dict[str, int | None] = {
         name: model.cap[name] * SCALE if name in model.cap else None for name in names
@@ -344,21 +357,25 @@ def _funds(
     payments: dict[int, list[Accepted]] = defaultdict(list)
     for assignment, task in accepted:
         payments[max(assignment.start, now)].append((assignment, task))
+    bought: dict[int, list[Purchase]] = defaultdict(list)
+    for purchase in purchases:
+        bought[max(purchase.at, now)].append(purchase)
     timeline: list[tuple[int, Mapping[str, int]]] = [(now, dict(ledger.stock))]
     violations: list[Violation] = []
-    for t in sorted(set(payments) | {problem.horizon_end}):
+
+    def pay(cost: Mapping[str, int], task_id: str | None, at: int) -> None:
+        short = sorted(name for name, amount in cost.items() if ledger.stock[name] < amount * SCALE)
+        if short:
+            violations.append(Violation("insufficient_funds", task_id, at, ",".join(short)))
+        for name, amount in cost.items():
+            ledger.stock[name] = max(0, ledger.stock[name] - amount * SCALE)
+
+    for t in sorted(set(payments) | set(bought) | {problem.horizon_end}):
         ledger.advance(t)
         for assignment, task in sorted(payments.get(t, []), key=lambda p: p[0].task_id):
-            cost = effective_cost(problem, task, assignment.start)
-            short = sorted(
-                name for name, amount in cost.items() if ledger.stock[name] < amount * SCALE
-            )
-            if short:
-                violations.append(
-                    Violation("insufficient_funds", task.id, assignment.start, ",".join(short))
-                )
-            for name, amount in cost.items():
-                ledger.stock[name] = max(0, ledger.stock[name] - amount * SCALE)
+            pay(effective_cost(problem, task, assignment.start), task.id, assignment.start)
+        for purchase in bought.get(t, []):
+            pay(purchase.cost, None, purchase.at)
         timeline.append((t, dict(ledger.stock)))
     return violations, ledger, tuple(timeline)
 
@@ -370,15 +387,24 @@ def _overlap(start: int, end: int, low: int, high: int) -> int:
     return max(0, min(end, high) - max(start, low))
 
 
-def simulate(problem: Problem, plan: Plan, reference: Plan | None = None) -> SimResult:
-    """Judge `plan` against `problem`; `reference` only feeds the perturbation metric."""
+def simulate(
+    problem: Problem,
+    plan: Plan,
+    reference: Plan | None = None,
+    *,
+    purchases: Sequence[Purchase] = (),
+) -> SimResult:
+    """Judge `plan` against `problem`; `reference` only feeds the perturbation metric.
+
+    `purchases` are paid by the stock besides the plan (E17), outside every lane.
+    """
     accepted, violations = _screen(problem, plan)
     violations += _timing_violations(problem, accepted)
     violations += _precedence_violations(problem, accepted)
     violations += _capacity_violations(problem, accepted)
     logins = _login_starts(problem, accepted)
     violations += _login_violations(problem, logins)
-    fund_violations, ledger, timeline = _funds(problem, accepted)
+    fund_violations, ledger, timeline = _funds(problem, accepted, purchases)
     violations += fund_violations
 
     now, horizon_end = problem.now, problem.horizon_end

@@ -167,6 +167,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/farm-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Farm Rate
+         * @description The declared farm rates and the ones observed between the last two manual inputs.
+         */
+        get: operations["get_farm_rate_api_villages__village_id__farm_rate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/villages/{village_id}/forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Forecast
+         * @description Stocks, funding dates, saturation, blocking resource, walls and effort of the latest plan.
+         */
+        get: operations["get_forecast_api_villages__village_id__forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/journal": {
         parameters: {
             query?: never;
@@ -198,7 +238,7 @@ export interface paths {
         get: operations["get_manual_api_villages__village_id__manual_get"];
         /**
          * Put Manual
-         * @description Replace the typed-in state of a village (resources, builders, farm rates, events...).
+         * @description Replace the typed-in state of a village; each typed resource adds a row to its history.
          */
         put: operations["put_manual_api_villages__village_id__manual_put"];
         post?: never;
@@ -458,6 +498,15 @@ export interface components {
             /** Task Id */
             task_id: string;
         };
+        /** BlockingOut */
+        BlockingOut: {
+            /** Delayed S */
+            delayed_s: number;
+            /** Resource */
+            resource: string;
+            /** Tasks */
+            tasks: string[];
+        };
         /** ChangeOut */
         ChangeOut: {
             after: components["schemas"]["PlacementOut"] | null;
@@ -496,6 +545,15 @@ export interface components {
             /** Score Delta */
             score_delta: number;
         };
+        /** DeclaredRate */
+        DeclaredRate: {
+            /** Expected */
+            expected: number;
+            /** High */
+            high: number;
+            /** Low */
+            low: number;
+        };
         /** DiffOut */
         DiffOut: {
             /** Added */
@@ -514,6 +572,25 @@ export interface components {
             upgraded: components["schemas"]["UpgradedOut"][];
             /** Village Id */
             village_id: string;
+        };
+        /**
+         * EffortOut
+         * @description Remaining cost of the goal (`scope` goal) or of every task (`scope` plan).
+         */
+        EffortOut: {
+            /** Cost */
+            cost: {
+                [key: string]: number;
+            };
+            /** Farm Hours */
+            farm_hours: {
+                [key: string]: components["schemas"]["ScenarioEstimates"];
+            };
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "goal" | "plan";
         };
         /** EnginesOut */
         EnginesOut: {
@@ -540,6 +617,23 @@ export interface components {
             /** Message */
             message: string;
         };
+        /**
+         * Estimate
+         * @description A provenance object of the model; `value` is null when `status` is `unknown`.
+         */
+        Estimate: {
+            /** As Of */
+            as_of: number | null;
+            /** Source */
+            source: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "estimated" | "unknown";
+            /** Value */
+            value: number | null;
+        };
         /** ExcludedOut */
         ExcludedOut: {
             /** Data Id */
@@ -564,6 +658,52 @@ export interface components {
             message: string;
             /** Value */
             value?: unknown;
+        };
+        /**
+         * FarmRateOut
+         * @description `declared`: the typed-in rates; `observed`: per hour from the last two stock inputs.
+         */
+        FarmRateOut: {
+            /** Declared */
+            declared: {
+                [key: string]: components["schemas"]["DeclaredRate"];
+            };
+            /** Observed */
+            observed: {
+                [key: string]: components["schemas"]["Estimate"];
+            };
+        };
+        /** ForecastOut */
+        ForecastOut: {
+            blocking: components["schemas"]["BlockingOut"] | null;
+            effort: components["schemas"]["EffortOut"];
+            /** Funding */
+            funding: components["schemas"]["FundingOut"][];
+            /** Horizon End */
+            horizon_end: number;
+            /** Now */
+            now: number;
+            /** Plan Id */
+            plan_id: number;
+            /** Saturation */
+            saturation: components["schemas"]["SaturationOut"][];
+            /** Series */
+            series: {
+                [key: string]: components["schemas"]["SeriesPoint"][];
+            };
+            /** Step S */
+            step_s: number;
+            /** Walls */
+            walls: components["schemas"]["WallOut"][];
+        };
+        /**
+         * FundingOut
+         * @description When the stock first covers the task's cost: `low` earliest (income high), `high` latest.
+         */
+        FundingOut: {
+            funded_at: components["schemas"]["ScenarioEstimates"] | null;
+            /** Task Id */
+            task_id: string;
         };
         /** GameDataUpdatedIn */
         GameDataUpdatedIn: {
@@ -1033,6 +1173,26 @@ export interface components {
             /** Village */
             village: string;
         };
+        /**
+         * SaturationOut
+         * @description The stock sits at its cap over `[start, end)` under the expected income.
+         */
+        SaturationOut: {
+            /** End */
+            end: number;
+            /** Resource */
+            resource: string;
+            /** Spilled */
+            spilled: number;
+            /** Start */
+            start: number;
+        };
+        /** ScenarioEstimates */
+        ScenarioEstimates: {
+            expected: components["schemas"]["Estimate"];
+            high: components["schemas"]["Estimate"];
+            low: components["schemas"]["Estimate"];
+        };
         /** ScheduleChangedIn */
         ScheduleChangedIn: {
             /** At */
@@ -1087,6 +1247,17 @@ export interface components {
             tz: string;
             /** Weekly */
             weekly: components["schemas"]["WeeklyWindow"][];
+        };
+        /**
+         * SeriesPoint
+         * @description The stock (units) at `t` under each income.
+         */
+        SeriesPoint: {
+            expected: components["schemas"]["Estimate"];
+            high: components["schemas"]["Estimate"];
+            low: components["schemas"]["Estimate"];
+            /** T */
+            t: number;
         };
         /** SnapshotImportedIn */
         SnapshotImportedIn: {
@@ -1270,6 +1441,26 @@ export interface components {
             village_id: string;
             /** Warnings */
             warnings: string[];
+        };
+        /**
+         * WallOut
+         * @description Upgrade wall `instance` of `data_id` to `level` at `at`, paid from the excess.
+         */
+        WallOut: {
+            /** At */
+            at: number;
+            /** Cost */
+            cost: {
+                [key: string]: number;
+            };
+            /** Data Id */
+            data_id: number;
+            /** Instance */
+            instance: number;
+            /** Level */
+            level: number;
+            /** Name */
+            name: string;
         };
         /**
          * WarWindow
@@ -1728,6 +1919,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_farm_rate_api_villages__village_id__farm_rate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FarmRateOut"];
+                };
+            };
+            /** @description Code village_not_found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_forecast_api_villages__village_id__forecast_get: {
+        parameters: {
+            query?: {
+                horizon_days?: number;
+            };
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
