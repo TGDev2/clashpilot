@@ -5,3 +5,5 @@ extend = "../../pyproject.toml"
 
 [lint.per-file-ignores]
 "test_rollout_planner_acceptance.py" = ["I001"]
+# Its import block sorted while `clashpilot.planning.solver` did not exist yet.
+"test_cpsat_planner_acceptance.py" = ["I001"]
