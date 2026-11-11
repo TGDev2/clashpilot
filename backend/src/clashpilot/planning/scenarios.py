@@ -467,7 +467,7 @@ def figures(
 # --------------------------------------------------------------------------- entry points
 
 
-def _compiled(
+def compiled(
     inputs: PlanInputs, params: PlanParams, body: Mapping[str, Any], same_snapshot: bool
 ) -> tuple[Problem, Objective]:
     """The problem and objective of the stored plan `body`, as it was computed."""
@@ -482,7 +482,7 @@ def plan_figures(
     inputs: PlanInputs, params: PlanParams, body: Mapping[str, Any], *, same_snapshot: bool
 ) -> dict[str, Any]:
     """The compared figures of the stored real plan. Raises `MissingInputError`."""
-    problem, _ = _compiled(inputs, params, body, same_snapshot)
+    problem, _ = compiled(inputs, params, body, same_snapshot)
     return figures(problem, stored_plan(body), inputs.pack, body["proof"])
 
 
@@ -520,7 +520,7 @@ def run_scenario(
         return document | {"status": UNSUPPORTED, "reasons": _reasons(missing)}
 
     changed = scenario_params(params, overlays)
-    problem, weights = _compiled(inputs, changed, body, same_snapshot)
+    problem, weights = compiled(inputs, changed, body, same_snapshot)
     strategy_set = any(overlay["type"] == "strategy" for overlay in overlays)
     objective = weights if strategy_set else (objective_of(inputs.journal) or weights)
     try:
