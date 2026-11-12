@@ -1,0 +1,54 @@
+
+> clashpilot@0.1.0 verify
+> node scripts/verify.mjs
+
+
+--- frontend output ---
+
+> clashpilot-frontend@0.1.0 lint
+> biome check
+
+Checked 68 files in 485ms. No fixes applied.
+
+> clashpilot-frontend@0.1.0 typecheck
+> tsc --noEmit
+
+
+> clashpilot-frontend@0.1.0 test
+> vitest run --testTimeout=20000
+
+
+ RUN  v5.1.0 /tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/work/frontend
+
+ ❯ src/e01-fail-480-1794523686180.test.ts (0 test)
+ ❯ src/e01-pass-480-1794523686180.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/e01-fail-480-1794523686180.test.ts [ src/e01-fail-480-1794523686180.test.ts ]
+Error: Cannot find module '/tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/work/frontend/src/e01-fail-480-1794523686180.test.ts'
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/e01-pass-480-1794523686180.test.ts [ src/e01-pass-480-1794523686180.test.ts ]
+Error: Cannot find module '/tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/work/frontend/src/e01-pass-480-1794523686180.test.ts'
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 11 passed (13)
+      Tests  190 passed (190)
+   Start at  23:48:10
+   Duration  62.22s (tests 67%, environment 19%, import 12%, transform 3%)
+
+    Isolate  13 workers spawned · ~1.02s startup each (spawn + environment, per file)
+             at least ~12.26s faster with isolate: false — reuses workers across files instead of one per file
+
+verify summary
+  node          ok               37.1s
+  backend-lint  ok               11.0s
+  backend-test  ok               91.9s
+  frontend      FAIL (exit 1)    76.3s
+verify: FAILED
+
+real	1m32.017s
+user	2m52.021s
+sys	0m8.465s

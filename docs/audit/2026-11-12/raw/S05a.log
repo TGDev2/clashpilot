@@ -1,0 +1,42 @@
+
+ RUN  v5.1.0 /tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/work/frontend
+
+ ❯ src/pages/import/S05a_manual_form_keeps_events.test.tsx (1 test | 1 failed) 329ms
+   × S05a keeps the saved events when the manual form is saved 327ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/import/S05a_manual_form_keeps_events.test.tsx > S05a keeps the saved events when the manual form is saved
+AssertionError: S05a events erased by the manual form: expected undefined to deeply equal [ { …(6) } ]
+
+- Expected:
+[
+  {
+    "cost_pct": 80,
+    "duration_pct": 80,
+    "end": 1800604800,
+    "label": "Défi des constructeurs",
+    "lane": "builder",
+    "start": 1800000000,
+  },
+]
+
++ Received:
+undefined
+
+ ❯ src/pages/import/S05a_manual_form_keeps_events.test.tsx:49:68
+     47|   await userEvent.click(screen.getByRole("button", { name: "Enregistre…
+     48|   await waitFor(() => expect(putBody).toBeDefined());
+     49|   expect(putBody?.events, "S05a events erased by the manual form").toE…
+       |                                                                    ^
+     50|   expect(putBody?.storage_override, "S05a storage_override erased").to…
+     51| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  23:58:32
+   Duration  1.40s (environment 39%, import 31%, tests 25%, transform 4%)
+

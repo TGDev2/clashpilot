@@ -1,0 +1,13 @@
+[
+  {
+    "id": "M01",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.1s",
+      "frontend      ok               53.8s",
+      "backend-lint  ok               0.6s",
+      "backend-test  FAIL (exit 1)    71.9s"
+    ],
+    "duree_s": 89
+  }
+]

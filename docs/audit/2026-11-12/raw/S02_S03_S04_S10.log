@@ -1,0 +1,65 @@
+FF........F                                                              [100%]
+=================================== FAILURES ===================================
+_________________ test_cross_site_text_plain_import_is_refused _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-13/test_cross_site_text_plain_imp0')
+
+    def test_cross_site_text_plain_import_is_refused(tmp_path: Path) -> None:
+        settings = Settings(data_dir=tmp_path, frontend_dist=tmp_path / "no-dist")
+        client = TestClient(create_app(settings, clock=lambda: EXPORTED_AT + 60))
+        forged = json.dumps({"tag": "#EVIL", "timestamp": EXPORTED_AT})
+        response = client.post(
+            "/api/villages/import",
+            content=forged,
+            headers={"Content-Type": "text/plain", "Origin": "https://evil.example"},
+        )
+>       assert response.status_code == 403, f"S02 cross-site import accepted: {response.status_code}"
+E       AssertionError: S02 cross-site import accepted: 201
+E       assert 201 == 403
+E        +  where 201 = <Response [201 Created]>.status_code
+
+backend/tests/unit/S02_csrf_import_test.py:31: AssertionError
+_____________________ test_foreign_host_header_is_refused ______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-13/test_foreign_host_header_is_re0')
+
+    def test_foreign_host_header_is_refused(tmp_path: Path) -> None:
+        settings = Settings(data_dir=tmp_path, frontend_dist=tmp_path / "no-dist")
+        client = TestClient(create_app(settings, clock=lambda: 1794133252))
+        response = client.get("/api/health", headers={"Host": "evil.example"})
+>       assert response.status_code in (400, 421), (
+            f"S03 foreign Host accepted: {response.status_code}"
+        )
+E       AssertionError: S03 foreign Host accepted: 200
+E       assert 200 in (400, 421)
+E        +  where 200 = <Response [200 OK]>.status_code
+
+backend/tests/unit/S03_dns_rebinding_test.py:22: AssertionError
+___________________ test_oversized_pack_is_refused_with_413 ____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-13/test_oversized_pack_is_refused0')
+
+    def test_oversized_pack_is_refused_with_413(tmp_path: Path) -> None:
+        settings = Settings(data_dir=tmp_path, frontend_dist=tmp_path / "no-dist")
+        client = TestClient(create_app(settings, clock=lambda: 1794133252))
+        body = '{"pack_id": "big", "padding": "' + "x" * 6_000_000 + '"}'
+        response = client.post(
+            "/api/gamedata/packs", content=body, headers={"Content-Type": "application/json"}
+        )
+>       assert response.status_code == 413, f"S10 oversized pack not refused: {response.status_code}"
+E       AssertionError: S10 oversized pack not refused: 422
+E       assert 422 == 413
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+backend/tests/unit/S10_pack_size_limit_test.py:24: AssertionError
+=============================== warnings summary ===============================
+backend/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/work/backend/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/unit/S02_csrf_import_test.py::test_cross_site_text_plain_import_is_refused
+FAILED backend/tests/unit/S03_dns_rebinding_test.py::test_foreign_host_header_is_refused
+FAILED backend/tests/unit/S10_pack_size_limit_test.py::test_oversized_pack_is_refused_with_413
+3 failed, 8 passed, 1 warning in 1.19s
