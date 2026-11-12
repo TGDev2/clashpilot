@@ -5,7 +5,7 @@
 **Verdict : Prêt sous réserve.** Aucune sonde rouge critique, mais trois rouges hautes.
 
 - **Sondes** : 7 rouges (0 critique, 3 hautes, 2 moyennes, 2 basses), 8 vertes, 0 non concluante.
-- **Mutations** : __MUTATION_RATE__ détectées (__MUTATION_COUNT__), vérification réparée (voir S01).
+- **Mutations** : 80 % détectées (16 sur 20), vérification réparée (voir S01).
 
 **Rouges majeures**
 
@@ -235,7 +235,23 @@ Un nom contenant CRLF + `BEGIN:VALARM` n'ajoute aucune ligne.
 
 ## 5. Mutations
 
-__MUTATIONS_SECTION__
+**Taux de détection : 16 / 20 = 80 %.** Commande : `node scripts/verify.mjs` sur le SHA audité plus
+`reparations/S01.diff` (sans cette réparation, la vérification échoue toujours et « détecterait »
+toutes les mutations). Définitions : `sondes/mutations.json` ; résultats et voies en échec :
+`raw/mutations_resultats.json`. Chaque mutation : environ 90 s.
+
+Mutations détectées : M01, M02, M04, M05, M07, M08, M10, M11, M13, M15, M16, M17, M19, M20
+(tests backend), M09 (voie `node` seulement : test d'acceptation figé de la fondation), M18
+(voie `frontend`).
+
+**Survivantes** (trous dans le filet) :
+
+| ID | Fichier | Mutation | Ce que cela laisserait passer |
+|----|---------|----------|-------------------------------|
+| M03 | `backend/src/clashpilot/planning/simulate.py:86` | `m.start <= start < m.end` devient `<= m.end` | Une amélioration lancée à l'instant exact de fin d'un événement en profite encore. |
+| M06 | `backend/src/clashpilot/planning/simulate.py:256` | `active > capacity` devient `active > capacity + 1` | Le contrôle de capacité tolère un chantier de plus que la file n'a d'ouvriers. |
+| M12 | `backend/src/clashpilot/ingest/official_api.py:104` | `timeout=TIMEOUT_S` devient `timeout=None` | Une API officielle muette bloque la synchronisation sans limite. |
+| M14 | `backend/src/clashpilot/api/ics.py:28` | l'échappement du `\n` seul est retiré | Un nom contenant un saut de ligne casse l'événement `.ics` (S12 ne couvre que CRLF). |
 
 ## 6. Technologies
 
@@ -300,6 +316,6 @@ protobuf, absl-py, immutabledict, opentelemetry-api) : tirées par OR-Tools, à 
 
 - **Maintenant** : A01 (fiabiliser `npm run verify`, S01), A02 (événements du jeu, S05a + S05b),
   A03 (origine et hôte, S02 + S03).
-- **Ensuite** : __ROADMAP_NEXT__
+- **Ensuite** : A04 (renforcer les tests du simulateur, de l'API officielle et de l'export `.ics` : M03, M06, M12, M14).
 - **Plus tard** : A05 (taille maximale du pack, S10), A06 (Node 24 minimum, S08b), montée de
   react-router 8 et TypeScript 7.

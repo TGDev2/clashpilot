@@ -9,5 +9,216 @@
       "backend-test  FAIL (exit 1)    71.9s"
     ],
     "duree_s": 89
+  },
+  {
+    "id": "M02",
+    "detectee": true,
+    "lanes": [
+      "node          ok               34.7s",
+      "frontend      ok               54.6s",
+      "backend-lint  ok               0.6s",
+      "backend-test  FAIL (exit 1)    69.7s"
+    ],
+    "duree_s": 89
+  },
+  {
+    "id": "M03",
+    "detectee": false,
+    "lanes": [
+      "node          ok               34.7s",
+      "frontend      ok               55.1s",
+      "backend-lint  ok               0.4s",
+      "backend-test  ok               70.9s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M04",
+    "detectee": true,
+    "lanes": [
+      "node          ok               33.5s",
+      "frontend      ok               55.2s",
+      "backend-lint  ok               0.6s",
+      "backend-test  FAIL (exit 1)    71.0s"
+    ],
+    "duree_s": 89
+  },
+  {
+    "id": "M05",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.7s",
+      "frontend      ok               54.0s",
+      "backend-lint  ok               0.6s",
+      "backend-test  FAIL (exit 1)    68.7s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M06",
+    "detectee": false,
+    "lanes": [
+      "node          ok               35.5s",
+      "frontend      ok               55.6s",
+      "backend-lint  ok               0.7s",
+      "backend-test  ok               72.8s"
+    ],
+    "duree_s": 91
+  },
+  {
+    "id": "M07",
+    "detectee": true,
+    "lanes": [
+      "node          ok               34.6s",
+      "frontend      ok               55.8s",
+      "backend-lint  FAIL (exit 1)    0.1s",
+      "backend-test  FAIL (exit 1)    70.8s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M08",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.2s",
+      "frontend      ok               57.6s",
+      "backend-lint  ok               0.8s",
+      "backend-test  FAIL (exit 1)    71.5s"
+    ],
+    "duree_s": 93
+  },
+  {
+    "id": "M09",
+    "detectee": true,
+    "lanes": [
+      "Test.runInAsyncScope (node:async_hooks:214:14)",
+      "node          FAIL (exit 1)    34.2s",
+      "frontend      ok               58.8s",
+      "backend-lint  ok               0.7s",
+      "backend-test  ok               77.1s"
+    ],
+    "duree_s": 93
+  },
+  {
+    "id": "M10",
+    "detectee": true,
+    "lanes": [
+      "node          ok               36.1s",
+      "frontend      ok               57.8s",
+      "backend-lint  ok               0.8s",
+      "backend-test  FAIL (exit 1)    74.6s"
+    ],
+    "duree_s": 94
+  },
+  {
+    "id": "M11",
+    "detectee": true,
+    "lanes": [
+      "node          ok               36.5s",
+      "frontend      ok               53.3s",
+      "backend-lint  ok               0.7s",
+      "backend-test  FAIL (exit 1)    71.8s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M12",
+    "detectee": false,
+    "lanes": [
+      "node          ok               36.2s",
+      "frontend      ok               54.6s",
+      "backend-lint  ok               0.7s",
+      "backend-test  ok               72.0s"
+    ],
+    "duree_s": 91
+  },
+  {
+    "id": "M13",
+    "detectee": true,
+    "lanes": [
+      "fetch_player(BASE, \"tok\", \"ABC1\", transport=transport)",
+      "node          ok               34.9s",
+      "frontend      ok               55.3s",
+      "backend-lint  ok               0.6s",
+      "backend-test  FAIL (exit 1)    69.7s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M14",
+    "detectee": false,
+    "lanes": [
+      "node          ok               36.2s",
+      "frontend      ok               54.0s",
+      "backend-lint  ok               0.7s",
+      "backend-test  ok               71.0s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M15",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.6s",
+      "frontend      ok               55.5s",
+      "backend-lint  ok               0.5s",
+      "backend-test  FAIL (exit 1)    73.1s"
+    ],
+    "duree_s": 91
+  },
+  {
+    "id": "M16",
+    "detectee": true,
+    "lanes": [
+      "node          ok               36.5s",
+      "frontend      ok               54.9s",
+      "backend-lint  ok               0.7s",
+      "backend-test  FAIL (exit 1)    72.7s"
+    ],
+    "duree_s": 91
+  },
+  {
+    "id": "M17",
+    "detectee": true,
+    "lanes": [
+      "node          ok               34.4s",
+      "frontend      ok               56.0s",
+      "backend-lint  ok               0.7s",
+      "backend-test  FAIL (exit 1)    73.3s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M18",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.4s",
+      "frontend      FAIL (exit 1)    50.8s",
+      "backend-lint  ok               0.6s",
+      "backend-test  ok               71.8s"
+    ],
+    "duree_s": 86
+  },
+  {
+    "id": "M19",
+    "detectee": true,
+    "lanes": [
+      "node          ok               34.2s",
+      "frontend      ok               55.7s",
+      "backend-lint  ok               0.5s",
+      "backend-test  FAIL (exit 1)    71.3s"
+    ],
+    "duree_s": 90
+  },
+  {
+    "id": "M20",
+    "detectee": true,
+    "lanes": [
+      "node          ok               35.1s",
+      "frontend      ok               54.1s",
+      "backend-lint  ok               0.7s",
+      "backend-test  FAIL (exit 1)    69.9s"
+    ],
+    "duree_s": 89
   }
 ]
