@@ -1,0 +1,122 @@
+diff --git a/backend/src/clashpilot/api/app.py b/backend/src/clashpilot/api/app.py
+index 5e42b3b..3482749 100644
+--- a/backend/src/clashpilot/api/app.py
++++ b/backend/src/clashpilot/api/app.py
+@@ -3,13 +3,15 @@
+ from __future__ import annotations
+ 
+ import time
+-from collections.abc import Callable
++from collections.abc import Awaitable, Callable
+ from importlib.metadata import version as package_version
+ from pathlib import Path
++from urllib.parse import urlsplit
+ 
+ import httpx
+-from fastapi import FastAPI, HTTPException
+-from fastapi.responses import FileResponse
++from fastapi import FastAPI, HTTPException, Request, Response
++from fastapi.responses import FileResponse, JSONResponse
++from starlette.middleware.trustedhost import TrustedHostMiddleware
+ 
+ from clashpilot.api.errors import error_detail, register_error_handlers
+ from clashpilot.api.routers import (
+@@ -23,7 +25,7 @@ from clashpilot.api.routers import (
+     schedule,
+     villages,
+ )
+-from clashpilot.settings import Settings
++from clashpilot.settings import LOOPBACK_HOSTS, Settings
+ 
+ Clock = Callable[[], int]
+ 
+@@ -32,6 +34,23 @@ def _default_clock() -> int:
+     return int(time.time())
+ 
+ 
++_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
++
++
++def _foreign_origin(request: Request) -> bool:
++    """Does a state-changing request come from a page of another site?
++
++    A loopback origin (the Vite dev server) and the origin of the host itself are ours.
++    """
++    origin = request.headers.get("origin")
++    if request.method in _SAFE_METHODS or origin is None:
++        return False
++    parts = urlsplit(origin)
++    if parts.hostname in LOOPBACK_HOSTS:
++        return False
++    return parts.netloc != request.headers.get("host", "")
++
++
+ def _not_found() -> HTTPException:
+     return HTTPException(404, detail=error_detail("not_found", "Ressource introuvable."))
+ 
+@@ -78,6 +97,16 @@ def create_app(
+     # Test seam: an httpx transport standing in for the network of the official API client.
+     app.state.coc_transport = coc_transport
+     register_error_handlers(app)
++    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
++
++    @app.middleware("http")
++    async def refuse_cross_site_writes(
++        request: Request, call_next: Callable[[Request], Awaitable[Response]]
++    ) -> Response:
++        if _foreign_origin(request):
++            detail = error_detail("forbidden_origin", "Requête d'un autre site refusée.")
++            return JSONResponse({"detail": detail}, status_code=403)
++        return await call_next(request)
+ 
+     @app.get("/api/health")
+     def health() -> dict[str, str]:
+diff --git a/backend/src/clashpilot/settings.py b/backend/src/clashpilot/settings.py
+index 3cfc915..75c185c 100644
+--- a/backend/src/clashpilot/settings.py
++++ b/backend/src/clashpilot/settings.py
+@@ -12,6 +12,20 @@ from typing import Any
+ _REPO_ROOT = Path(__file__).resolve().parents[3]
+ 
+ DEFAULT_COC_BASE_URL = "https://api.clashofclans.com/v1"
++LOOPBACK_HOSTS = ("127.0.0.1", "localhost")
++
++
++def _allowed_hosts(source: Mapping[str, str], host: str) -> tuple[str, ...]:
++    """Host names the server answers: an explicit list, else loopback plus the bound host.
++
++    Bound to 0.0.0.0 without a list, every name is accepted (the README warns about that mode).
++    """
++    explicit = source.get("CLASHPILOT_ALLOWED_HOSTS", "")
++    if explicit.strip():
++        return tuple(name.strip() for name in explicit.split(",") if name.strip())
++    if host == "0.0.0.0":
++        return ("*",)
++    return LOOPBACK_HOSTS if host in LOOPBACK_HOSTS else (*LOOPBACK_HOSTS, host)
+ 
+ 
+ @dataclass(frozen=True)
+@@ -23,6 +37,7 @@ class Settings:
+     port: int = 8000
+     frontend_dist: Path = _REPO_ROOT / "frontend" / "dist"
+     planner_overrides: Mapping[str, Any] = field(default_factory=dict)
++    allowed_hosts: tuple[str, ...] = ("*",)
+ 
+     @classmethod
+     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
+@@ -32,12 +47,14 @@ class Settings:
+         overrides: dict[str, Any] = {}
+         if source.get("CLASHPILOT_SOLVER_MAX_TIME_S"):
+             overrides["solver_max_time_s"] = float(source["CLASHPILOT_SOLVER_MAX_TIME_S"])
++        host = source.get("CLASHPILOT_HOST", defaults.host)
+         return cls(
+             data_dir=Path(source.get("CLASHPILOT_DATA_DIR", str(defaults.data_dir))),
+             coc_token=source.get("CLASHPILOT_COC_TOKEN") or None,
+             coc_base_url=source.get("CLASHPILOT_COC_BASE_URL", defaults.coc_base_url),
+-            host=source.get("CLASHPILOT_HOST", defaults.host),
++            host=host,
+             port=int(source.get("CLASHPILOT_PORT", str(defaults.port))),
+             frontend_dist=Path(source.get("CLASHPILOT_FRONTEND_DIST", str(defaults.frontend_dist))),
+             planner_overrides=overrides,
++            allowed_hosts=_allowed_hosts(source, host),
+         )

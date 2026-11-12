@@ -1,0 +1,168 @@
+{
+  "format": "backlog-contrat/1",
+  "titre": "ClashPilot : corrections de l'audit du 2026-11-12",
+  "vérification": "npm run verify",
+  "spec": [
+    "# Contexte de l'audit",
+    "Audit par sondes du SHA 2d560b82f8efbacd37d29ed5cf63405fb6df3144 : rapport docs/audit/2026-11-12/AUDIT.md, sondes dans docs/audit/2026-11-12/sondes/, corrections validées dans docs/audit/2026-11-12/reparations/.",
+    "Stack : backend FastAPI (Python 3.13, OR-Tools CP-SAT, SQLite) qui sert le frontend React 19 + Vite 8 + Tailwind 4 ; tests pytest + Hypothesis, Vitest + Testing Library, Playwright pour l'e2e.",
+    "Vérification unique : npm run verify (lint ruff + mypy --strict, pytest, Biome, tsc, Vitest, build, gen-api --check). Un seul fichier : node scripts/test-one.mjs <fichier>.",
+    "Les fichiers d'acceptation figés (scripts/foundation.acceptance.test.mjs, backend/tests/acceptance/*, frontend/src/acceptance/*, vite.config.ts pour les tests figés) ne se modifient pas.",
+    "Chaque tâche adopte une sonde rouge dans la suite puis la fait passer au vert, sans jamais affaiblir son assertion.",
+    "Commits courts en anglais au format Conventional Commits, sans numéro de tâche ni mention d'outil ; signés TGDev2."
+  ],
+  "hypothèses": [
+    "H01 La vérification unique échoue sur un clone propre (course entre les voies node et frontend).",
+    "H02 Une page d'un autre site peut écrire dans ClashPilot (POST text/plain sans contrôle d'Origin).",
+    "H03 Un rebond DNS permet de lire l'API (aucun contrôle de l'en-tête Host).",
+    "H05 Les événements du jeu ne peuvent pas entrer dans le plan depuis l'interface, et la saisie manuelle les efface.",
+    "H08 Node 22, minimum accepté, arrive en fin de support le 2027-04-30.",
+    "H10 L'import d'un pack de données n'a pas de taille maximale.",
+    "Mutations survivantes M03, M06, M12, M14 : trous dans le filet de tests."
+  ],
+  "tâches": [
+    {
+      "id": "A01",
+      "titre": "Fiabiliser npm run verify (voies node et frontend en course)",
+      "branche": "fix/verify-race",
+      "modèle": "sonnet",
+      "effort": "medium",
+      "dépend_de": [],
+      "requiert": [],
+      "garantit": [
+        "npm run verify sort en 0 trois fois de suite sur un clone propre",
+        "Aucun fichier e01-*.test.ts écrit par la voie node n'est ramassé par Vitest",
+        "La durée totale de verify n'augmente pas de plus de 20 %",
+        "La sonde S01 passe"
+      ],
+      "tests_acceptation": "docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs (rejouée telle quelle : elle lance verify elle-même et ne doit pas entrer dans verify)",
+      "à_vérifier_par_toi": [
+        "Lancer npm run verify trois fois de suite sur le PC Windows : trois succès"
+      ],
+      "instructions": "Sonde S01 (hypothèse H01). Preuve : `npm run verify` échoue 4 fois sur 4 sur un clone propre, voie frontend en échec avec `FAIL src/e01-pass-…test.ts` / `Cannot find module` (docs/audit/2026-11-12/raw/02_verify*.log). Cause : scripts/foundation.acceptance.test.mjs (test d'acceptation FIGÉ, à ne pas modifier) écrit deux fichiers temporaires dans frontend/src pendant que scripts/verify.mjs lance la voie frontend (Vitest) en parallèle. Lance d'abord `node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs .` et constate qu'elle est rouge. Correction validée, point de départ : docs/audit/2026-11-12/reparations/S01.diff (la voie frontend démarre après la voie node ; les voies backend restent en parallèle ; mesuré à 89 s contre 92 s). Fichier à modifier : scripts/verify.mjs uniquement. Garde la fonction exportée runLanes inchangée (elle est utilisée par les tests de la fondation). Pièges : ne touche ni à foundation.acceptance.test.mjs ni à vite.config.ts (tous deux figés) ; n'ajoute pas d'exclusion Vitest à la place du séquencement, Biome et tsc liraient aussi les fichiers temporaires. Hors périmètre : toute autre optimisation de verify. Ne modifie jamais l'assertion d'une sonde pour la faire passer : si elle te semble fausse, arrête-toi et signale-le."
+    },
+    {
+      "id": "A02",
+      "titre": "Saisir les événements du jeu et ne plus les effacer",
+      "branche": "feat/saisie-evenements",
+      "modèle": "sonnet",
+      "effort": "high",
+      "dépend_de": [
+        "A01"
+      ],
+      "requiert": [
+        "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs ."
+      ],
+      "garantit": [
+        "Enregistrer la saisie manuelle renvoie dans le PUT les events, gold_pass et storage_override déjà enregistrés",
+        "La page Importer propose une section « Événements du jeu » (nom, file, début, fin, réduction de durée et de coût en %) qui relit les événements enregistrés",
+        "Un événement saisi dans l'interface arrive dans le corps du PUT avec duration_pct = 100 - réduction et cost_pct = 100 - réduction",
+        "Une saisie incomplète (nom vide, fin avant le début, réduction > 100 %) affiche une erreur et n'envoie rien",
+        "Les sondes S05a et S05b passent ; la sonde S05c reste verte"
+      ],
+      "tests_acceptation": "frontend/src/pages/import/ManualFormEvents.test.tsx",
+      "à_vérifier_par_toi": [
+        "Rendu de la section Événements sur téléphone et sur ordinateur",
+        "Saisie des dates avec le sélecteur datetime-local du navigateur",
+        "Créer un événement de -20 % sur les constructeurs, recalculer le plan et constater des durées réduites"
+      ],
+      "instructions": "Sondes S05a et S05b (hypothèse H05, exigence du projet : le plan tient compte des événements qui réduisent coût et durée). Preuves : S05a `events erased by the manual form: expected undefined to deeply equal [...]` (raw/S05a.log) ; S05b `no game event input in the UI` (raw/S05b.log). Le moteur sait déjà appliquer les événements (S05c verte). Adopte d'abord docs/audit/2026-11-12/sondes/S05a_manual_form_keeps_events.test.tsx dans frontend/src/pages/import/ManualFormEvents.test.tsx et constate qu'elle est rouge ; ajoute dans ce même fichier un test de comportement (remplir un événement dans l'interface, enregistrer, vérifier le corps du PUT) qui remplace la vérification statique de S05b. Correction validée, point de départ : docs/audit/2026-11-12/reparations/S05.diff. Fichiers : frontend/src/pages/import/ManualForm.tsx, frontend/src/i18n/fr.ts. Pièges : PUT /api/villages/{id}/manual remplace tout l'état saisi, donc le formulaire doit renvoyer ce qu'il n'affiche pas (gold_pass, storage_override) ; les dates datetime-local sont en heure du navigateur ; les files valides sont celles du compilateur (builder, lab, pet_house, blacksmith) ; lance `node scripts/gen-api.mjs --check` (le schéma ne doit pas changer). Hors périmètre : le Gold Pass (aucune règle de pack), tout changement backend. Ne modifie jamais l'assertion d'une sonde pour la faire passer : si elle te semble fausse, arrête-toi et signale-le."
+    },
+    {
+      "id": "A03",
+      "titre": "Refuser les requêtes d'un autre site et les hôtes étrangers",
+      "branche": "fix/origin-host-checks",
+      "modèle": "opus",
+      "effort": "high",
+      "dépend_de": [
+        "A01"
+      ],
+      "requiert": [
+        "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs ."
+      ],
+      "garantit": [
+        "Un POST /api/villages/import en text/plain avec Origin: https://evil.example renvoie 403 (code forbidden_origin) et ne crée aucun village",
+        "Une requête de lecture avec Host: evil.example renvoie 400 quand le serveur est lancé avec les réglages par défaut",
+        "127.0.0.1 et localhost restent acceptés, ainsi que l'Origin du serveur Vite (npm run dev)",
+        "CLASHPILOT_ALLOWED_HOSTS (liste séparée par des virgules) remplace la liste par défaut et est documentée dans le README",
+        "Les sondes S02 et S03 passent"
+      ],
+      "tests_acceptation": "backend/tests/unit/test_cross_site_requests.py",
+      "à_vérifier_par_toi": [
+        "npm run dev : l'application fonctionne via le proxy Vite",
+        "Accès depuis le téléphone (Tailscale Serve ou IP locale) avec CLASHPILOT_ALLOWED_HOSTS renseigné",
+        "npm run e2e reste vert"
+      ],
+      "instructions": "Sondes S02 et S03 (hypothèses H02 et H03). Preuves : `S02 cross-site import accepted: 201` et `S03 foreign Host accepted: 200` (raw/S02_S03_S04_S10.log). Adopte d'abord docs/audit/2026-11-12/sondes/S02_csrf_import_test.py et S03_dns_rebinding_test.py dans backend/tests/unit/test_cross_site_requests.py et constate qu'ils sont rouges. Correction validée, point de départ : docs/audit/2026-11-12/reparations/S02_S03.diff (Settings.allowed_hosts lu par Settings.from_env : 127.0.0.1 et localhost par défaut, plus l'hôte d'écoute s'il est explicite, `*` en 0.0.0.0 ; TrustedHostMiddleware ; middleware qui refuse en 403 les méthodes d'écriture dont l'Origin n'est ni locale ni celle de l'hôte). Fichiers : backend/src/clashpilot/settings.py, backend/src/clashpilot/api/app.py, README.md (section Accès depuis le réseau local). Pièges : les tests existants construisent Settings(...) directement avec le TestClient (Host `testserver`) : la valeur par défaut du champ doit rester `(\"*\",)` ; le proxy Vite réécrit Host mais garde l'Origin http://localhost:5173 ; mypy --strict et ruff format doivent passer. Hors périmètre : une authentification pour le mode 0.0.0.0. Ne modifie jamais l'assertion d'une sonde pour la faire passer : si elle te semble fausse, arrête-toi et signale-le."
+    },
+    {
+      "id": "A04",
+      "titre": "Renforcer les tests du simulateur, de l'API officielle et de l'export .ics",
+      "branche": "test/mutations-survivantes",
+      "modèle": "sonnet",
+      "effort": "medium",
+      "dépend_de": [
+        "A01"
+      ],
+      "requiert": [
+        "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs ."
+      ],
+      "garantit": [
+        "M03 (fin d'événement incluse dans simulate._active) fait échouer npm run verify",
+        "M06 (capacité + 1 dans simulate._capacity_violations) fait échouer npm run verify",
+        "M12 (timeout=None dans official_api.fetch_player) fait échouer npm run verify",
+        "M14 (\\n seul non échappé dans ics._escape) fait échouer npm run verify",
+        "Les sondes vertes S04, S05c, S06, S07, S11 et S12 sont adoptées dans la suite et passent"
+      ],
+      "tests_acceptation": "backend/tests/unit/test_audit_guards.py",
+      "à_vérifier_par_toi": [],
+      "instructions": "Mutations survivantes de l'audit (docs/audit/2026-11-12/AUDIT.md section 5, définitions exactes dans sondes/mutations.json). Écris des tests ciblés : M03, une tâche démarrée exactement à Modifier.end n'a pas la réduction ; M06, trois chantiers simultanés sur une file de capacité 2 produisent une violation lane_capacity ; M12, fetch_player passe un délai fini au client httpx (transport qui vérifie request.extensions['timeout'] ou client patché) ; M14, un nom contenant un \\n seul produit SUMMARY et DESCRIPTION sur une seule ligne logique. Pour chacune, applique la mutation à la main, constate que le nouveau test échoue, puis annule la mutation. Adopte aussi les sondes vertes docs/audit/2026-11-12/sondes/S04_spa_traversal_test.py, S05c_events_reduce_plan_test.py, S06_strict_sleep_test.py, S07_no_idle_builder_test.py, S11_dst_sleep_test.py et S12_ics_injection_test.py (S05c, S06 et S07 importent tests/support : place-les dans backend/tests/unit/). Fichiers : nouveaux fichiers de tests seulement. Pièges : S06 lance cpsat et auto, garde la configuration TEST_CONFIG pour rester sous le délai de 20 s par test ; vérifie la durée de la voie backend-test. Hors périmètre : toute modification du code de production. Ne modifie jamais l'assertion d'une sonde pour la faire passer."
+    },
+    {
+      "id": "A05",
+      "titre": "Limiter la taille de l'import d'un pack de données",
+      "branche": "fix/pack-size-limit",
+      "modèle": "sonnet",
+      "effort": "low",
+      "dépend_de": [
+        "A01"
+      ],
+      "requiert": [
+        "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs ."
+      ],
+      "garantit": [
+        "POST /api/gamedata/packs avec un corps au-delà de la limite renvoie 413 (code pack_too_large) avant d'avoir lu tout le corps",
+        "Les packs de test existants s'importent toujours",
+        "La sonde S10 passe"
+      ],
+      "tests_acceptation": "backend/tests/unit/test_pack_size_limit.py",
+      "à_vérifier_par_toi": [
+        "Importer le plus gros pack réel construit avec clashpilot.gamedata.builder : il passe sous la limite"
+      ],
+      "instructions": "Sonde S10 (hypothèse H10). Preuve : `S10 oversized pack not refused: 422` (raw/S02_S03_S04_S10.log) : un corps de 6 Mo est lu en entier puis rejeté comme pack invalide. Adopte d'abord docs/audit/2026-11-12/sondes/S10_pack_size_limit_test.py dans backend/tests/unit/test_pack_size_limit.py et constate qu'elle est rouge. Pas de correction validée fournie (gravité basse) : lis le corps comme _read_body de backend/src/clashpilot/api/routers/villages.py (lecture par morceaux, arrêt au-delà de la limite), puis valide-le en JSON. Fixe la limite à 5 Mo si le plus gros pack de backend/tests/fixtures/packs reste loin en dessous ; sinon choisis une limite au moins quatre fois plus grande que ce pack et indique-la dans le README. Fichier : backend/src/clashpilot/api/routers/gamedata.py. Piège : garde le schéma OpenAPI du corps (openapi_extra) pour que `node scripts/gen-api.mjs --check` passe ou régénère le client. Ne modifie jamais l'assertion d'une sonde pour la faire passer : si elle te semble fausse, arrête-toi et signale-le."
+    },
+    {
+      "id": "A06",
+      "titre": "Exiger Node 24 au minimum",
+      "branche": "chore/node-24",
+      "modèle": "haiku",
+      "effort": "low",
+      "dépend_de": [
+        "A01"
+      ],
+      "requiert": [
+        "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs ."
+      ],
+      "garantit": [
+        "package.json déclare engines.node >=24",
+        "Le README annonce Node.js 24 ou plus récent",
+        "La sonde S08b passe"
+      ],
+      "tests_acceptation": "docs\\audit\\2026-11-12\\sondes\\S08b_runtime_support.mjs (rejouée telle quelle)",
+      "à_vérifier_par_toi": [
+        "Node 24 ou plus récent installé sur le PC (node --version)"
+      ],
+      "instructions": "Sonde S08b (hypothèse H08). Preuve : `Node 22 (engines \">=22.14.0\") ends 2027-04-30` (endoflife.date, relevé le 2026-11-12 ; raw/S08b.log). Lance d'abord `node docs\\audit\\2026-11-12\\sondes\\S08b_runtime_support.mjs .` et constate qu'elle est rouge. Fichiers : package.json (engines.node à \">=24.0.0\"), README.md (Prérequis). Vérifie que scripts/ et le test d'acceptation de la fondation ne testent pas la version 22.14 exacte ; s'il le font, arrête-toi et signale-le (fichier figé). Ne modifie jamais l'assertion d'une sonde pour la faire passer : si elle te semble fausse, arrête-toi et signale-le."
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "base": "SHA audité + reparations/S01.diff (sans elle, la vérification échoue toujours et détecterait tout)",
+  "commande": "node scripts/verify.mjs",
+  "mutations": [
+    {
+      "id": "M01",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "if policy.mode == \"strict\" and calendar.is_sleep(end):",
+      "apres": "if policy.mode == \"strict\" and calendar.is_sleep(end) and False:",
+      "description": "le mode strict n'interdit plus les fins pendant le sommeil"
+    },
+    {
+      "id": "M02",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "return -(-amount * pct // 100)",
+      "apres": "return amount * pct // 100",
+      "description": "arrondi des réductions d'événement vers le bas au lieu du haut"
+    },
+    {
+      "id": "M03",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "m.lane == lane and m.start <= start < m.end",
+      "apres": "m.lane == lane and m.start <= start <= m.end",
+      "description": "borne de fin d'événement incluse"
+    },
+    {
+      "id": "M04",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "if wait > policy.tolerance_s:",
+      "apres": "if wait > policy.tolerance_s + 60:",
+      "description": "tolérance d'inactivité élargie d'une minute"
+    },
+    {
+      "id": "M05",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "if end is None or end > assignment.start:",
+      "apres": "if end is None:",
+      "description": "une amélioration peut démarrer avant la fin de son prérequis"
+    },
+    {
+      "id": "M06",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "if active > capacity and planned:",
+      "apres": "if active > capacity + 1 and planned:",
+      "description": "un ouvrier de plus que la capacité est toléré"
+    },
+    {
+      "id": "M07",
+      "fichier": "backend/src/clashpilot/planning/simulate.py",
+      "avant": "short = sorted(name for name, amount in cost.items() if ledger.stock[name] < amount * SCALE)",
+      "apres": "short = sorted(name for name, amount in cost.items() if ledger.stock[name] < amount * SCALE // 2)",
+      "description": "fonds insuffisants tolérés jusqu'à la moitié du coût"
+    },
+    {
+      "id": "M08",
+      "fichier": "backend/src/clashpilot/planning/compile.py",
+      "avant": "            Modifier(e.start, e.end, e.lane, e.duration_pct, e.cost_pct) for e in manual.events\n        ),",
+      "apres": "            Modifier(e.start, e.end, e.lane, e.duration_pct, e.cost_pct) for e in manual.events[:0]\n        ),",
+      "description": "les événements saisis sont ignorés à la compilation"
+    },
+    {
+      "id": "M09",
+      "fichier": "backend/src/clashpilot/api/app.py",
+      "avant": "    if not candidate.is_relative_to(root):\n        return None",
+      "apres": "    if False:\n        return None",
+      "description": "la route attrape-tout ne vérifie plus que le fichier est dans dist"
+    },
+    {
+      "id": "M10",
+      "fichier": "backend/src/clashpilot/api/routers/villages.py",
+      "avant": "if len(body) > MAX_EXPORT_BYTES:",
+      "apres": "if len(body) > MAX_EXPORT_BYTES * 10:",
+      "description": "limite de taille de l'export multipliée par 10"
+    },
+    {
+      "id": "M11",
+      "fichier": "backend/src/clashpilot/api/routers/villages.py",
+      "avant": "\"SELECT snapshot_id, raw_json, imported_at FROM village_snapshots \"\n            \"WHERE village_id = ? ORDER BY exported_at DESC",
+      "apres": "\"SELECT snapshot_id, raw_json, imported_at FROM village_snapshots \"\n            \"WHERE village_id = ? ORDER BY exported_at ASC",
+      "description": "l'état affiché du village vient du plus ancien export"
+    },
+    {
+      "id": "M12",
+      "fichier": "backend/src/clashpilot/ingest/official_api.py",
+      "avant": "with httpx.Client(transport=transport, timeout=TIMEOUT_S) as client:",
+      "apres": "with httpx.Client(transport=transport, timeout=None) as client:",
+      "description": "plus de délai d'expiration vers l'API officielle"
+    },
+    {
+      "id": "M13",
+      "fichier": "backend/src/clashpilot/ingest/official_api.py",
+      "avant": "    if status == 429:",
+      "apres": "    if status == 428:",
+      "description": "la limite de débit n'est plus reconnue"
+    },
+    {
+      "id": "M14",
+      "fichier": "backend/src/clashpilot/api/ics.py",
+      "avant": "return escaped.replace(\"\\r\\n\", \"\\\\n\").replace(\"\\n\", \"\\\\n\").replace(\"\\r\", \"\\\\n\")",
+      "apres": "return escaped.replace(\"\\r\\n\", \"\\\\n\").replace(\"\\r\", \"\\\\n\")",
+      "description": "un saut de ligne seul n'est plus échappé dans l'agenda"
+    },
+    {
+      "id": "M15",
+      "fichier": "backend/src/clashpilot/schedule/profile.py",
+      "avant": "        if self.start == self.end:\n            raise PydanticCustomError(",
+      "apres": "        if False:\n            raise PydanticCustomError(",
+      "description": "une fenêtre horaire de durée nulle est acceptée"
+    },
+    {
+      "id": "M16",
+      "fichier": "backend/src/clashpilot/ingest/export.py",
+      "avant": "normalized = tag.strip().lstrip(\"#\").upper() if isinstance(tag, str) else \"\"",
+      "apres": "normalized = tag.strip().lstrip(\"#\") if isinstance(tag, str) else \"\"",
+      "description": "le tag du village n'est plus mis en majuscules"
+    },
+    {
+      "id": "M17",
+      "fichier": "backend/src/clashpilot/planning/heuristics/baseline.py",
+      "avant": "return task.value / max(1, task.duration_s)",
+      "apres": "return task.duration_s / max(1e-9, task.value)",
+      "description": "l'heuristique classe les tâches à l'envers"
+    },
+    {
+      "id": "M18",
+      "fichier": "frontend/src/pages/import/ManualForm.tsx",
+      "avant": "  if (trimmed === \"\") {\n    return null;\n  }\n  if (!INTEGER.test(trimmed)) {",
+      "apres": "  if (trimmed === \"\") {\n    return 0;\n  }\n  if (!INTEGER.test(trimmed)) {",
+      "description": "un champ vide de la saisie manuelle est envoyé comme 0"
+    },
+    {
+      "id": "M19",
+      "fichier": "backend/src/clashpilot/schedule/expand.py",
+      "avant": "            before = middle\n        else:\n            after = middle\n    return after",
+      "apres": "            before = middle\n        else:\n            after = middle\n    return before",
+      "description": "l'instant du saut d'heure est décalé d'une seconde"
+    },
+    {
+      "id": "M20",
+      "fichier": "backend/src/clashpilot/planning/compile.py",
+      "avant": "        missing.append(\"builders_total\")",
+      "apres": "        pass",
+      "description": "un nombre de constructeurs inconnu n'est plus signalé comme manquant"
+    }
+  ]
+}

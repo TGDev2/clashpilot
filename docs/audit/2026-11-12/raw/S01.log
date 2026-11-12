@@ -1,0 +1,3 @@
+S01 FAIL: verify exit 1; stray e01 files picked up by Vitest: 2
+  FAIL  src/e01-fail-16428-1794524471142.test.ts [ src/e01-fail-16428-1794524471142.test.ts ]
+  FAIL  src/e01-pass-16428-1794524471142.test.ts [ src/e01-pass-16428-1794524471142.test.ts ]

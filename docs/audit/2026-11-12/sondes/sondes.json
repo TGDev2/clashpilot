@@ -1,0 +1,240 @@
+{
+  "sha": "2d560b82f8efbacd37d29ed5cf63405fb6df3144",
+  "date": "2026-11-12",
+  "sondes": [
+    {
+      "id": "S01",
+      "hypothese": "H01",
+      "titre": "La vérification unique passe sur un clone propre",
+      "gravite": "haute",
+      "etiquettes": [
+        "tests",
+        "exploitation"
+      ],
+      "fichier": "sondes/S01_verify_clean_clone.mjs",
+      "commande": "node docs\\audit\\2026-11-12\\sondes\\S01_verify_clean_clone.mjs .",
+      "execution": "copie_temporaire",
+      "motif_attendu": "stray e01 files picked up by Vitest",
+      "statut": "rouge",
+      "preuve": "S01 FAIL: verify exit 1; stray e01 files picked up by Vitest: 2 — FAIL src/e01-fail-…test.ts / src/e01-pass-…test.ts (Cannot find module). 4 exécutions sur 4 rouges (raw/02_verify*.log, raw/S01.log) ; la voie frontend seule passe (raw/03_frontend_lane_seul.log).",
+      "reparation": "reparations/S01.diff"
+    },
+    {
+      "id": "S02",
+      "hypothese": "H02",
+      "titre": "Une page d'un autre site ne peut pas écrire dans ClashPilot",
+      "gravite": "moyenne",
+      "etiquettes": [
+        "securite"
+      ],
+      "fichier": "sondes/S02_csrf_import_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S02_csrf_import_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S02 cross-site import accepted: 201",
+      "statut": "rouge",
+      "preuve": "AssertionError: S02 cross-site import accepted: 201 (POST text/plain, Origin: https://evil.example) — raw/S02_S03_S04_S10.log",
+      "reparation": "reparations/S02_S03.diff"
+    },
+    {
+      "id": "S03",
+      "hypothese": "H03",
+      "titre": "Un nom d'hôte étranger (rebond DNS) est refusé",
+      "gravite": "moyenne",
+      "etiquettes": [
+        "securite"
+      ],
+      "fichier": "sondes/S03_dns_rebinding_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S03_dns_rebinding_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S03 foreign Host accepted: 200",
+      "statut": "rouge",
+      "preuve": "AssertionError: S03 foreign Host accepted: 200 (GET /api/health, Host: evil.example) — raw/S02_S03_S04_S10.log. Sonde corrigée une fois avant réparation pour construire les réglages comme au lancement réel (Settings.from_env) ; toujours rouge sur le SHA audité.",
+      "reparation": "reparations/S02_S03.diff"
+    },
+    {
+      "id": "S04",
+      "hypothese": "H04",
+      "titre": "La route attrape-tout ne sert rien hors de frontend/dist",
+      "gravite": "haute",
+      "etiquettes": [
+        "securite"
+      ],
+      "fichier": "sondes/S04_spa_traversal_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S04_spa_traversal_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S04 traversal served the secret",
+      "statut": "vert",
+      "preuve": "7 tentatives (.., %2e%2e, %2f, %5c, double encodage) : 7 passed — raw/S02_S03_S04_S10.log"
+    },
+    {
+      "id": "S05a",
+      "hypothese": "H05",
+      "titre": "Enregistrer la saisie manuelle conserve les événements du jeu",
+      "gravite": "haute",
+      "etiquettes": [
+        "donnees",
+        "fonctionnel"
+      ],
+      "fichier": "sondes/S05a_manual_form_keeps_events.test.tsx",
+      "commande": "node scripts\\test-one.mjs frontend\\src\\pages\\import\\S05a_manual_form_keeps_events.test.tsx",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S05a events erased by the manual form",
+      "statut": "rouge",
+      "preuve": "AssertionError: S05a events erased by the manual form: expected undefined to deeply equal [ { …(6) } ] — raw/S05a.log",
+      "reparation": "reparations/S05.diff"
+    },
+    {
+      "id": "S05b",
+      "hypothese": "H05",
+      "titre": "L'interface permet de saisir un événement du jeu",
+      "gravite": "haute",
+      "etiquettes": [
+        "fonctionnel"
+      ],
+      "fichier": "sondes/S05b_events_input_exists.mjs",
+      "commande": "node docs\\audit\\2026-11-12\\sondes\\S05b_events_input_exists.mjs .",
+      "execution": "depot",
+      "motif_attendu": "S05b FAIL: no game event input in the UI",
+      "statut": "rouge",
+      "preuve": "S05b FAIL: no game event input in the UI (no duration_pct/cost_pct outside the generated schema) — raw/S05b.log",
+      "reparation": "reparations/S05.diff"
+    },
+    {
+      "id": "S05c",
+      "hypothese": "H05",
+      "titre": "Un événement saisi réduit durée et coût dans le plan, pour chaque moteur",
+      "gravite": "haute",
+      "etiquettes": [
+        "fonctionnel"
+      ],
+      "fichier": "sondes/S05c_events_reduce_plan_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S05c_events_reduce_plan_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S05c {engine}: event ignored",
+      "statut": "vert",
+      "preuve": "baseline, rollout, cpsat, auto : 10 h à 80 % → 8 h, 10 000 or → 8 000 — raw/S05c_S07_S11_S12.log"
+    },
+    {
+      "id": "S06",
+      "hypothese": "H06",
+      "titre": "En mode strict, chaque moteur rend un plan valide sans fin pendant le sommeil",
+      "gravite": "haute",
+      "etiquettes": [
+        "fonctionnel",
+        "fiabilite"
+      ],
+      "fichier": "sondes/S06_strict_sleep_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S06_strict_sleep_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S06 {engine} seed",
+      "statut": "vert",
+      "preuve": "4 moteurs × 3 graines, 14 tâches, 10 nuits : 12 passed — raw/S06.log. Sonde corrigée deux fois (module support.instances, champ metrics.ends_in_sleep), erreurs d'écriture de la sonde et non du projet."
+    },
+    {
+      "id": "S07",
+      "hypothese": "H07",
+      "titre": "Aucun ouvrier inactif quand une amélioration est possible",
+      "gravite": "haute",
+      "etiquettes": [
+        "fonctionnel"
+      ],
+      "fichier": "sondes/S07_no_idle_builder_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S07_no_idle_builder_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S07 {engine}: builder",
+      "statut": "vert",
+      "preuve": "3 ouvriers, 6 tâches, fonds abondants : chaque ouvrier démarre à now et enchaîne sans trou, pour les 4 moteurs — raw/S05c_S07_S11_S12.log"
+    },
+    {
+      "id": "S08",
+      "hypothese": "H08",
+      "titre": "Aucune vulnérabilité connue ni licence copyleft dans le code livré",
+      "gravite": "moyenne",
+      "etiquettes": [
+        "securite",
+        "techno"
+      ],
+      "fichier": "sondes/S08_dependencies.mjs",
+      "commande": "node docs\\audit\\2026-11-12\\sondes\\S08_dependencies.mjs . pip_audit.json",
+      "execution": "depot",
+      "motif_attendu": "S08 FAIL",
+      "statut": "vert",
+      "preuve": "npm audit --omit=dev : 0 (frontend, e2e) ; pip-audit : 0 ; aucune licence GPL/AGPL/LGPL/SSPL en production — raw/S08.log. Les 6 alertes de npm ci (2 basses, 4 modérées) sont toutes dans workbox-build, outil de build seulement."
+    },
+    {
+      "id": "S08b",
+      "hypothese": "H08",
+      "titre": "Les versions minimales de Node et Python restent supportées 6 mois",
+      "gravite": "basse",
+      "etiquettes": [
+        "techno"
+      ],
+      "fichier": "sondes/S08b_runtime_support.mjs",
+      "commande": "node docs\\audit\\2026-11-12\\sondes\\S08b_runtime_support.mjs .",
+      "execution": "depot",
+      "motif_attendu": "S08b FAIL: runtime reaching end of life",
+      "statut": "rouge",
+      "preuve": "S08b FAIL: Node 22 (engines \">=22.14.0\") ends 2027-04-30 (endoflife.date, relevé le 2026-11-12) — raw/S08b.log"
+    },
+    {
+      "id": "S09",
+      "hypothese": "H09",
+      "titre": "Aucun secret dans l'arbre ni dans l'historique",
+      "gravite": "haute",
+      "etiquettes": [
+        "securite"
+      ],
+      "fichier": "sondes/S09_secrets.py",
+      "commande": "python -I docs\\audit\\2026-11-12\\sondes\\S09_secrets.py .",
+      "execution": "depot",
+      "motif_attendu": "S09 FAIL",
+      "statut": "vert",
+      "preuve": "S09 ok: 0 match in tracked files and 80 commits — raw/S09.log. Premier passage : un faux jeton de test (TOKEN-…) dans test_village_state_sync_acceptance.py, exclu comme valeur factice."
+    },
+    {
+      "id": "S10",
+      "hypothese": "H10",
+      "titre": "L'import d'un pack de données a une taille maximale",
+      "gravite": "basse",
+      "etiquettes": [
+        "fiabilite"
+      ],
+      "fichier": "sondes/S10_pack_size_limit_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S10_pack_size_limit_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S10 oversized pack not refused: 422",
+      "statut": "rouge",
+      "preuve": "AssertionError: S10 oversized pack not refused: 422 (corps de 6 Mo lu en entier puis rejeté comme pack invalide) — raw/S02_S03_S04_S10.log"
+    },
+    {
+      "id": "S11",
+      "hypothese": "H11",
+      "titre": "La nuit 23 h - 7 h suit l'heure locale au changement d'heure",
+      "gravite": "haute",
+      "etiquettes": [
+        "fonctionnel"
+      ],
+      "fichier": "sondes/S11_dst_sleep_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S11_dst_sleep_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S11 sleep window shifted",
+      "statut": "vert",
+      "preuve": "Europe/Paris, nuits du 28 mars (7 h) et du 24 octobre 2026 (9 h) : 2 passed — raw/S05c_S07_S11_S12.log"
+    },
+    {
+      "id": "S12",
+      "hypothese": "H12",
+      "titre": "Un nom piégé n'injecte aucune ligne dans l'export .ics",
+      "gravite": "moyenne",
+      "etiquettes": [
+        "securite"
+      ],
+      "fichier": "sondes/S12_ics_injection_test.py",
+      "commande": "node scripts\\test-one.mjs backend\\tests\\unit\\S12_ics_injection_test.py",
+      "execution": "copie_temporaire",
+      "motif_attendu": "S12 injected line",
+      "statut": "vert",
+      "preuve": "CRLF + BEGIN:VALARM dans le nom : aucune ligne en plus — raw/S05c_S07_S11_S12.log"
+    }
+  ]
+}
