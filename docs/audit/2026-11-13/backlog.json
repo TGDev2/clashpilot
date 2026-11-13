@@ -1,0 +1,14 @@
+{
+  "format": "backlog-contrat/1",
+  "titre": "ClashPilot : rejeu de l'audit du 2026-11-12, le 2026-11-13",
+  "vérification": "npm run verify",
+  "spec": [
+    "# Contexte du rejeu",
+    "Rejeu des sondes de docs/audit/2026-11-12 sur le SHA 2cfa48ccad15d5cf4542abd03aa039495198eadf : aucune sonde persistante ni régressée, aucune tâche à mener.",
+    "Chaque tâche future adopte une sonde rouge dans la suite puis la fait passer au vert, sans jamais affaiblir son assertion."
+  ],
+  "hypothèses": [
+    "Hypothèses H01 à H12 de docs/audit/2026-11-12/hypotheses.md, toutes tranchées en faveur du projet après corrections."
+  ],
+  "tâches": []
+}

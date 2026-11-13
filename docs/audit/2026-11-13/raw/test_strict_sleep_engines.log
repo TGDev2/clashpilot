@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.2.0, pluggy-1.7.0
+rootdir: /tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/rejeu/backend
+configfile: pyproject.toml
+plugins: hypothesis-6.170.15, xdist-3.8.0, timeout-2.4.0, anyio-4.16.0
+timeout: 20.0s
+timeout method: signal
+timeout func_only: False
+collected 12 items
+
+backend/tests/unit/test_strict_sleep_engines.py ............             [100%]
+
+============================= 12 passed in 28.20s ==============================

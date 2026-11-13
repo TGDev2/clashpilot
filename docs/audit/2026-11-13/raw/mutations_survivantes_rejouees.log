@@ -1,0 +1,5 @@
+{"id": "M03", "detectee": true, "lanes": ["node          ok               33.9s", "frontend      ok               70.1s", "backend-lint  ok               0.9s", "backend-test  FAIL (exit 1)    116.1s"], "duree_s": 116}
+{"id": "M06", "detectee": true, "lanes": ["node          ok               34.1s", "frontend      ok               70.3s", "backend-lint  ok               0.4s", "backend-test  FAIL (exit 1)    118.5s"], "duree_s": 119}
+{"id": "M12", "detectee": true, "lanes": ["fetch_player(\"https://api.example\", \"tok\", \"ABC\", transport=httpx.MockTransport(handler))", "node          ok               34.1s", "frontend      ok               76.4s", "backend-lint  ok               0.6s", "backend-test  FAIL (exit 1)    119.0s"], "duree_s": 119}
+{"id": "M14", "detectee": true, "lanes": ["node          ok               37.7s", "frontend      ok               73.7s", "backend-lint  ok               0.5s", "backend-test  FAIL (exit 1)    124.9s"], "duree_s": 125}
+done

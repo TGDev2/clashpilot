@@ -1,0 +1,9 @@
+
+ RUN  v5.1.0 /tmp/claude-0/-home-claude/28b05b23-edd6-514d-97c9-1ca480721870/scratchpad/rejeu/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:22:45
+   Duration  2.20s (tests 55%, environment 24%, import 14%, transform 7%)
+
