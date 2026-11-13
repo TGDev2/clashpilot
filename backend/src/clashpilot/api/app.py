@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from importlib.metadata import version as package_version
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import httpx
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from clashpilot.api.errors import error_detail, register_error_handlers
 from clashpilot.api.routers import (
@@ -23,13 +25,30 @@ from clashpilot.api.routers import (
     schedule,
     villages,
 )
-from clashpilot.settings import Settings
+from clashpilot.settings import LOOPBACK_HOSTS, Settings
 
 Clock = Callable[[], int]
 
 
 def _default_clock() -> int:
     return int(time.time())
+
+
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+def _foreign_origin(request: Request) -> bool:
+    """Does a state-changing request come from a page of another site?
+
+    A loopback origin (the Vite dev server) and the origin of the host itself are ours.
+    """
+    origin = request.headers.get("origin")
+    if request.method in _SAFE_METHODS or origin is None:
+        return False
+    parts = urlsplit(origin)
+    if parts.hostname in LOOPBACK_HOSTS:
+        return False
+    return parts.netloc != request.headers.get("host", "")
 
 
 def _not_found() -> HTTPException:
@@ -78,6 +97,16 @@ def create_app(
     # Test seam: an httpx transport standing in for the network of the official API client.
     app.state.coc_transport = coc_transport
     register_error_handlers(app)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
+
+    @app.middleware("http")
+    async def refuse_cross_site_writes(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        if _foreign_origin(request):
+            detail = error_detail("forbidden_origin", "Requête d'un autre site refusée.")
+            return JSONResponse({"detail": detail}, status_code=403)
+        return await call_next(request)
 
     @app.get("/api/health")
     def health() -> dict[str, str]:

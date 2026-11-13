@@ -66,6 +66,13 @@ Par défaut le serveur n'écoute que `127.0.0.1` : seul cet ordinateur y accède
 un téléphone du même réseau, lancez-le avec `CLASHPILOT_HOST=0.0.0.0` (le port se règle avec
 `CLASHPILOT_PORT`).
 
+Le serveur ne répond qu'aux noms `127.0.0.1` et `localhost` (et à `CLASHPILOT_HOST` s'il est
+explicite). Pour l'atteindre sous un autre nom, par exemple via Tailscale Serve ou l'adresse IP de
+l'ordinateur, listez ces noms dans `CLASHPILOT_ALLOWED_HOSTS`, séparés par des virgules (la liste
+remplace alors les valeurs par défaut) : `CLASHPILOT_ALLOWED_HOSTS=192.168.1.20,localhost`. Avec
+`CLASHPILOT_HOST=0.0.0.0` et sans liste, tous les noms sont acceptés. Dans tous les cas, une
+écriture envoyée par la page d'un autre site est refusée.
+
 **Attention, avertissement de sécurité : ClashPilot n'a aucune authentification.** Avec
 `CLASHPILOT_HOST=0.0.0.0`, toute personne qui atteint le port lit et modifie vos données. Ne
 l'utilisez que sur un réseau de confiance, jamais derrière une redirection de port vers Internet.
