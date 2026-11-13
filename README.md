@@ -9,7 +9,7 @@ Projet non officiel, sans lien avec Supercell.
 
 ## Prérequis
 
-- Node.js 22.14 ou plus récent
+- Node.js 24 ou plus récent
 - Python 3.13 (sous Windows : le lanceur `py -3.13`)
 
 ## Installation
