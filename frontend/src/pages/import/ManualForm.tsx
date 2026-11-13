@@ -19,6 +19,16 @@ type Resource = (typeof RESOURCES)[number];
 type TypedStatus = "confirmed" | "estimated";
 type Rate = { low: string; expected: string; high: string };
 type ItemDraft = { id: number; name: string; quantity: string };
+type EventDraft = {
+  id: number;
+  label: string;
+  lane: string;
+  start: string;
+  end: string;
+  durationCut: string;
+  costCut: string;
+};
+const EVENT_LANES = ["builder", "lab", "pet_house", "blacksmith"] as const;
 
 type Draft = {
   values: Record<Resource, string>;
@@ -26,6 +36,7 @@ type Draft = {
   rates: Record<Resource, Rate>;
   builders: string;
   items: ItemDraft[];
+  events: EventDraft[];
 };
 
 function everyResource<T>(make: () => T): Record<Resource, T> {
@@ -37,6 +48,25 @@ function blankItem(): ItemDraft {
   return { id: nextItemId++, name: "", quantity: "" };
 }
 
+function blankEvent(): EventDraft {
+  return {
+    id: nextItemId++,
+    label: "",
+    lane: "builder",
+    start: "",
+    end: "",
+    durationCut: "",
+    costCut: "",
+  };
+}
+
+/** `datetime-local` text of an epoch, in the browser's time zone. */
+function localInput(epoch: number): string {
+  const date = new Date(epoch * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function blankDraft(): Draft {
   return {
     values: everyResource(() => ""),
@@ -44,6 +74,7 @@ function blankDraft(): Draft {
     rates: everyResource(() => ({ low: "", expected: "", high: "" })),
     builders: "",
     items: [blankItem()],
+    events: [],
   };
 }
 
@@ -72,6 +103,15 @@ function draftOf(saved: ManualOut): Draft {
     quantity: String(quantity),
   }));
   draft.items = items.length > 0 ? items : [blankItem()];
+  draft.events = saved.events.map((event) => ({
+    id: nextItemId++,
+    label: String(event.label),
+    lane: String(event.lane),
+    start: localInput(Number(event.start)),
+    end: localInput(Number(event.end)),
+    durationCut: String(100 - Number(event.duration_pct)),
+    costCut: String(100 - Number(event.cost_pct)),
+  }));
   return draft;
 }
 
@@ -122,11 +162,32 @@ function bodyOf(draft: Draft, asOf: number) {
     }
     magicItems[name] = quantity;
   }
+  const events = draft.events.map((event) => {
+    const start = Date.parse(event.start) / 1000;
+    const end = Date.parse(event.end) / 1000;
+    const durationCut = count(event.durationCut) ?? 0;
+    const costCut = count(event.costCut) ?? 0;
+    if (event.label.trim() === "" || Number.isNaN(start) || Number.isNaN(end) || end <= start) {
+      throw new DraftError(fr.manual.eventIncomplete);
+    }
+    if (durationCut > 100 || costCut > 100) {
+      throw new DraftError(fr.manual.eventPercent);
+    }
+    return {
+      label: event.label.trim(),
+      lane: event.lane,
+      start,
+      end,
+      duration_pct: 100 - durationCut,
+      cost_pct: 100 - costCut,
+    };
+  });
   return {
     resources,
     builders_total: count(draft.builders),
     farm_rate: farmRate,
     magic_items: magicItems,
+    events,
   };
 }
 
@@ -261,11 +322,16 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
       }
       throw error;
     }
+    // PUT replaces the whole typed-in state: keep what this form does not show.
+    const kept = {
+      gold_pass: saved?.gold_pass ?? {},
+      storage_override: saved?.storage_override ?? {},
+    };
     setBusy(true);
     const outcome = await settle(() =>
       api().PUT("/api/villages/{village_id}/manual", {
         params: { path: { village_id: villageId } },
-        body,
+        body: { ...kept, ...body },
       }),
     );
     setBusy(false);
@@ -392,6 +458,86 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
           ))}
           <Button onPress={() => edit((d) => ({ ...d, items: [...d.items, blankItem()] }))}>
             {fr.manual.addItem}
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">{fr.manual.eventsTitle}</h3>
+          <p className="text-xs text-mist">{fr.manual.eventsHint}</p>
+          {draft.events.map((event) => {
+            const change = (patch: Partial<EventDraft>) =>
+              edit((d) => ({
+                ...d,
+                events: d.events.map((e) => (e.id === event.id ? { ...e, ...patch } : e)),
+              }));
+            return (
+              <div
+                key={event.id}
+                className="grid gap-2 rounded-lg border border-line/70 p-3 sm:grid-cols-3"
+              >
+                <label className="block space-y-1">
+                  <span className="block text-xs text-mist">{fr.manual.eventLabel}</span>
+                  <input
+                    type="text"
+                    value={event.label}
+                    onChange={(e) => change({ label: e.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="block text-xs text-mist">{fr.manual.eventLane}</span>
+                  <select
+                    value={event.lane}
+                    onChange={(e) => change({ lane: e.target.value })}
+                    className={inputClass}
+                  >
+                    {EVENT_LANES.map((lane) => (
+                      <option key={lane} value={lane}>
+                        {fr.manual.lanes[lane]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block space-y-1">
+                  <span className="block text-xs text-mist">{fr.manual.eventStart}</span>
+                  <input
+                    type="datetime-local"
+                    value={event.start}
+                    onChange={(e) => change({ start: e.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="block text-xs text-mist">{fr.manual.eventEnd}</span>
+                  <input
+                    type="datetime-local"
+                    value={event.end}
+                    onChange={(e) => change({ end: e.target.value })}
+                    className={inputClass}
+                  />
+                </label>
+                <NumberField
+                  label={fr.manual.eventDurationCut}
+                  value={event.durationCut}
+                  onChange={(value) => change({ durationCut: value })}
+                />
+                <NumberField
+                  label={fr.manual.eventCostCut}
+                  value={event.costCut}
+                  onChange={(value) => change({ costCut: value })}
+                />
+                <Button
+                  onPress={() =>
+                    edit((d) => ({ ...d, events: d.events.filter((e) => e.id !== event.id) }))
+                  }
+                >
+                  {fr.manual.removeEvent}
+                </Button>
+              </div>
+            );
+          })}
+          <Button onPress={() => edit((d) => ({ ...d, events: [...d.events, blankEvent()] }))}>
+            {fr.manual.addEvent}
           </Button>
         </div>
 
