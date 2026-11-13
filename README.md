@@ -47,7 +47,7 @@ backend/.venv/Scripts/python -m clashpilot.gamedata.builder \
 
 (sous Linux ou macOS : `backend/.venv/bin/python`). L'outil ne touche pas au réseau. Un niveau
 illisible n'est jamais deviné : il est écarté du pack et signalé. Importez ensuite `pack.json` dans
-la page **Importer**, section « Données de jeu », puis activez-le.
+la page **Importer**, section « Données de jeu », puis activez-le. Un pack ne doit pas dépasser 5 Mo.
 
 ## Importer un village
 

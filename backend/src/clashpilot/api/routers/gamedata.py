@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Request, Response
+from fastapi import APIRouter, Body, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from clashpilot.api.errors import ApiError
@@ -28,6 +29,29 @@ from clashpilot.storage.packs import (
 )
 
 router = APIRouter(prefix="/api/gamedata", tags=["gamedata"])
+
+MAX_PACK_BYTES = 5_000_000
+
+
+def _invalid_request(problem: str) -> ApiError:
+    """The same error as a body that fails FastAPI's own validation."""
+    return ApiError(422, "invalid_request", "Requête invalide.", [problem])
+
+
+async def _read_pack(request: Request) -> dict[str, Any]:
+    """The JSON object of the body, read no further than the size limit."""
+    body = bytearray()
+    async for chunk in request.stream():
+        body += chunk
+        if len(body) > MAX_PACK_BYTES:
+            raise ApiError(413, "pack_too_large", "Le pack dépasse la taille maximale de 5 Mo.")
+    try:
+        payload = json.loads(body.decode("utf-8-sig"))
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        raise _invalid_request("body: JSON invalide") from error
+    if not isinstance(payload, dict):
+        raise _invalid_request("body: Input should be a valid dictionary")
+    return payload
 
 
 class PackSummary(BaseModel):
@@ -152,11 +176,24 @@ def _summary_of(connection: sqlite3.Connection, pack_id: str) -> PackSummary:
     responses={
         200: {"model": PackSummary, "description": "Identical pack already stored."},
         409: {"model": ErrorBody, "description": "Same pack_id, different content."},
+        413: {"model": ErrorBody, "description": "Body over 5 MB (code pack_too_large)."},
         422: {"model": ErrorBody, "description": "Invalid pack (code invalid_pack)."},
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {"additionalProperties": True, "type": "object", "title": "Payload"}
+                }
+            },
+        }
     },
 )
 def import_pack(
-    request: Request, response: Response, payload: Annotated[dict[str, Any], Body()]
+    request: Request,
+    response: Response,
+    payload: Annotated[dict[str, Any], Depends(_read_pack)],
 ) -> PackSummary:
     try:
         pack = load_pack(payload)
