@@ -121,7 +121,19 @@ async function main() {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
   }
-  const outcome = await runLanes(projectLanes(), { timeoutMs: LANE_TIMEOUT_MS });
+  // The node lane writes temporary *.test.ts files into frontend/src (frozen E01 acceptance
+  // tests): the frontend lane must not scan that folder at the same time, so it runs after it.
+  const lanes = projectLanes();
+  const byName = (name) => lanes.find((lane) => lane.name === name);
+  const [backend, chained] = await Promise.all([
+    runLanes([byName('backend-lint'), byName('backend-test')], { timeoutMs: LANE_TIMEOUT_MS }),
+    (async () => {
+      const first = await runLanes([byName('node')], { timeoutMs: LANE_TIMEOUT_MS });
+      const second = await runLanes([byName('frontend')], { timeoutMs: LANE_TIMEOUT_MS });
+      return { ok: first.ok && second.ok, results: [...first.results, ...second.results] };
+    })(),
+  ]);
+  const outcome = { ok: backend.ok && chained.ok, results: [...chained.results, ...backend.results] };
   report(outcome);
   process.exit(outcome.ok ? 0 : 1);
 }
