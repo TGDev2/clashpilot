@@ -575,6 +575,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/town-hall/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Town Hall Compare
+         * @description Compare launching the next town hall after the current level, as soon as a builder stays
+         *     free, or at the end of a builder reduction; simulated on the latest plan's inputs.
+         */
+        post: operations["post_town_hall_compare_api_villages__village_id__town_hall_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -732,6 +753,16 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "unsupported" | "unavailable";
+        };
+        /**
+         * CompositionLeftOut
+         * @description The current-level tasks of the plan's composition not finished, and their work left.
+         */
+        CompositionLeftOut: {
+            /** Count */
+            count: number;
+            /** Work S */
+            work_s: number;
         };
         /** ConflictOut */
         ConflictOut: {
@@ -1127,6 +1158,15 @@ export interface components {
              */
             status: "ok" | "unsupported";
         };
+        /** HeroLevelOut */
+        HeroLevelOut: {
+            /** Data Id */
+            data_id: number;
+            /** Level Reached */
+            level_reached: number;
+            /** Name */
+            name: string;
+        };
         /**
          * ItemCompareRequest
          * @description `item` is a rule key of the active pack; `candidate_tasks` the tasks it may act on.
@@ -1242,6 +1282,48 @@ export interface components {
             lane: string;
             /** Work S */
             work_s: number;
+        };
+        /**
+         * LaunchOptionOut
+         * @description One moment to launch the town hall; the figures are read at its end (`th_finish`).
+         *
+         *     An `infeasible` option carries its reasons and no dates nor figures.
+         */
+        LaunchOptionOut: {
+            /** Engine */
+            engine: string;
+            /** Heroes */
+            heroes: components["schemas"]["HeroLevelOut"][];
+            /** Idle Builder S */
+            idle_builder_s: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "after" | "no_wait" | "discount_edge";
+            proof: components["schemas"]["ProofOut"] | null;
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "infeasible";
+            /** Th Finish */
+            th_finish: number | null;
+            /** Th Start */
+            th_start: number | null;
+            /** Unfinished By Lane */
+            unfinished_by_lane: {
+                [key: string]: number;
+            };
+            unfinished_composition: components["schemas"]["CompositionLeftOut"] | null;
+            /** Unfinished Count */
+            unfinished_count: number | null;
+            /** Unfinished Work S By Lane */
+            unfinished_work_s_by_lane: {
+                [key: string]: number;
+            };
         };
         /** LevelOut */
         LevelOut: {
@@ -1828,7 +1910,7 @@ export interface components {
             /** Name */
             name: string;
             /** Overlays */
-            overlays: (components["schemas"]["StartNowIn"] | components["schemas"]["ReserveBuilderIn"] | components["schemas"]["AbsenceIn"] | components["schemas"]["PolicyIn"] | components["schemas"]["StrategyIn"] | components["schemas"]["ReducePlayIn"] | components["schemas"]["UseItemIn"])[];
+            overlays: (components["schemas"]["StartNowIn"] | components["schemas"]["StartAtIn"] | components["schemas"]["ReserveBuilderIn"] | components["schemas"]["AbsenceIn"] | components["schemas"]["PolicyIn"] | components["schemas"]["StrategyIn"] | components["schemas"]["ReducePlayIn"] | components["schemas"]["UseItemIn"])[];
             /** Profile */
             profile?: ("fast" | "repro") | null;
         };
@@ -1925,6 +2007,21 @@ export interface components {
             retrieved_at: string;
             /** Url */
             url: string | null;
+        };
+        /**
+         * StartAtIn
+         * @description Start `task_id` at the first instant from the UTC epoch `at` the simulator accepts.
+         */
+        StartAtIn: {
+            /** At */
+            at: number;
+            /** Task Id */
+            task_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "start_at";
         };
         /**
          * StartNowIn
@@ -2031,6 +2128,36 @@ export interface components {
         ToEpochIn: {
             /** Local Datetime */
             local_datetime: string;
+        };
+        /**
+         * TownHallCompareRequest
+         * @description Without `engine` and `profile`, the defaults of `POST plans` (profile `fast`); without
+         *     `skip_lanes`, the latest plan's `town_hall_skip_lanes`.
+         */
+        TownHallCompareRequest: {
+            /** Engine */
+            engine?: string | null;
+            /** Profile */
+            profile?: ("fast" | "repro") | null;
+            /** Skip Lanes */
+            skip_lanes?: string[] | null;
+        };
+        /**
+         * TownHallComparisonOut
+         * @description The town hall aimed at, the lanes it does not wait for under `after`, and the options.
+         */
+        TownHallComparisonOut: {
+            /** Now */
+            now: number;
+            /** Options */
+            options: components["schemas"]["LaunchOptionOut"][];
+            /** Reference Plan Id */
+            reference_plan_id: number;
+            /** Scope */
+            scope: string;
+            /** Skip Lanes */
+            skip_lanes: string[];
+            target: components["schemas"]["CriticalTargetOut"] | null;
         };
         /** UpgradedOut */
         UpgradedOut: {
@@ -3705,6 +3832,59 @@ export interface operations {
             };
             /** @description Codes coc_rate_limited, coc_unavailable. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_town_hall_compare_api_villages__village_id__town_hall_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TownHallCompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TownHallComparisonOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy, unknown_lane or invalid_request. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

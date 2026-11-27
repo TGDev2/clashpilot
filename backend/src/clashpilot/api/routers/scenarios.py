@@ -56,6 +56,14 @@ class StartNowIn(_Overlay):
     task_id: str
 
 
+class StartAtIn(_Overlay):
+    """Start `task_id` at the first instant from the UTC epoch `at` the simulator accepts."""
+
+    type: Literal["start_at"]
+    task_id: str
+    at: int = Field(ge=0)
+
+
 class ReserveBuilderIn(_Overlay):
     """`count` builders fewer from now until the UTC epoch `until`."""
 
@@ -107,7 +115,14 @@ class UseItemIn(_Overlay):
 
 
 OverlayIn = Annotated[
-    StartNowIn | ReserveBuilderIn | AbsenceIn | PolicyIn | StrategyIn | ReducePlayIn | UseItemIn,
+    StartNowIn
+    | StartAtIn
+    | ReserveBuilderIn
+    | AbsenceIn
+    | PolicyIn
+    | StrategyIn
+    | ReducePlayIn
+    | UseItemIn,
     Field(discriminator="type"),
 ]
 

@@ -148,10 +148,11 @@ def _value(task: Task, strategy: Strategy, composition: frozenset[int]) -> float
     return task.value * factor
 
 
-def _town_hall_last(tasks: Sequence[Task], skip_lanes: Iterable[str] = ()) -> tuple[Task, ...]:
+def town_hall_last(tasks: Sequence[Task], skip_lanes: Iterable[str] = ()) -> tuple[Task, ...]:
     """Each town hall upgrade requires every task that does not depend on a town hall.
 
-    The tasks of `skip_lanes` are not waited for.
+    The tasks of `skip_lanes` are not waited for. The constraint `town_hall_last` applies it; the
+    town hall comparator (E26) applies it whatever the plan's strategy.
     """
     town_halls = {task.id for task in tasks if TOWN_HALL_TAG in task.tags}
     if not town_halls:
@@ -163,6 +164,10 @@ def _town_hall_last(tasks: Sequence[Task], skip_lanes: Iterable[str] = ()) -> tu
         else task
         for task in tasks
     )
+
+
+# The name the E22 acceptance test reads the rule's source by.
+_town_hall_last = town_hall_last
 
 
 def apply_strategy(
@@ -183,7 +188,7 @@ def apply_strategy(
         dataclasses.replace(task, value=_value(task, strategy, chosen)) for task in problem.tasks
     )
     if TOWN_HALL_LAST in strategy.constraints:
-        tasks = _town_hall_last(tasks, town_hall_skip_lanes)
+        tasks = town_hall_last(tasks, town_hall_skip_lanes)
     blackouts = problem.hero_blackouts
     if WAR_WINDOWS in strategy.constraints:
         blackouts = tuple(sorted((int(start), int(end)) for start, end in war_windows))
