@@ -18,8 +18,11 @@ saturated lane (a lab with months of research on one slot). `critical_path` comp
    Every task of a critical lane gets a float of 0, since that lane must never stop;
 6. `chains` keeps the longest paths of the set, one per `data_id`, at most three.
 
-Capacity and resources do not delay the chains: the work bounds stand for the capacity. Pure: no
-I/O, no clock.
+Capacity and resources do not delay the chains: the work bounds stand for the capacity.
+
+For a stored plan read at a later instant, `start_figures` says how much a start matters to the
+date and `stopped_work` which critical chains and lanes stand idle. Pure: no I/O, no clock (`now`
+is a parameter).
 """
 
 from __future__ import annotations
@@ -31,7 +34,7 @@ from operator import itemgetter
 from typing import Literal
 
 from clashpilot.planning.compile import TOWN_HALL_TAG
-from clashpilot.planning.model import Problem, Task
+from clashpilot.planning.model import Assignment, Problem, Task
 from clashpilot.planning.simulate import (
     calendar_bounds,
     effective_duration,
@@ -41,6 +44,7 @@ from clashpilot.planning.simulate import (
 
 MAX_CHAINS = 3
 CRITICAL_FLOAT_S = 300  # a task with at most this float is critical
+STOPPED_AFTER_S = 15 * 60  # idle critical work is reported when its next start is further than this
 _DAY_S = 24 * 3600
 _MAX_STEPS = 10_000  # safety cap of the search of a valid start; each step moves forward
 
@@ -309,6 +313,110 @@ def critical_path(problem: Problem, skip_lanes: Iterable[str] = ()) -> CriticalP
         float_s=floats,
         chains=_chains(members, early),
     )
+
+
+@dataclass(frozen=True)
+class StartFigures:
+    """What a start weighs on the date of the next town hall."""
+
+    float_s: int | None  # None: no town hall target, or a task beyond the current level
+    critical: bool
+    date_gain_s: int  # duration saved by the modifiers at that start, 0 unless critical
+
+
+def start_figures(problem: Problem, path: CriticalPath, task_id: str, start: int) -> StartFigures:
+    """The figures of `task_id` started at `start`; `path` is `critical_path(problem)`."""
+    slack = path.float_s.get(task_id)
+    if slack is None or slack > CRITICAL_FLOAT_S:
+        return StartFigures(slack, False, 0)
+    task = next(task for task in problem.tasks if task.id == task_id)
+    saved = task.duration_s - effective_duration(problem, task, start)
+    return StartFigures(slack, True, max(0, saved))
+
+
+@dataclass(frozen=True)
+class ChainStopped:
+    """Nothing of a critical chain runs, and `task`, its next upgrade, is ready but waits."""
+
+    task: Task
+    planned_start: int | None  # None: the plan does not hold the task
+    delay_s: int | None
+
+
+@dataclass(frozen=True)
+class LaneStopped:
+    """Nothing runs on a critical lane that has work waiting."""
+
+    lane: str
+    planned_start: int | None  # None: the plan starts nothing more on the lane
+    delay_s: int | None
+
+
+def stopped_work(
+    problem: Problem, path: CriticalPath, assignments: Sequence[Assignment], now: int
+) -> tuple[ChainStopped | LaneStopped, ...]:
+    """The critical chains and lanes standing idle at `now`, chains first.
+
+    `assignments` are those of the plan, running jobs included; `path` is `critical_path(problem)`.
+    The plan is taken as followed: an assignment runs over `[start, end)` and is finished at its
+    end. A newer export prevails over it: a running job of the problem counts even if the plan
+    starts it later, and an assignment found neither in the tasks nor in the running jobs is done.
+
+    - A chain is critical when its last task is. Its next task is the first one not finished; it is
+      reported when nothing of the chain runs, its requirements are finished, and the plan starts
+      it more than `STOPPED_AFTER_S` after `now`, or not at all.
+    - A critical lane with nothing running is reported when its next start is that far away or,
+      without any further start, when one of its tasks is ready.
+    """
+    tasks = {task.id: task for task in problem.tasks}
+    outstanding = set(tasks) | {job.task_id for job in problem.frozen}
+    kept = [a for a in assignments if a.task_id in outstanding]
+    jobs = [(a.task_id, a.lane, a.start, a.end) for a in kept]
+    jobs += [(job.task_id, job.lane, job.start, job.end) for job in problem.frozen]
+    running = [(name, lane) for name, lane, start, end in jobs if start <= now < end]
+    busy_tasks = {name for name, _ in running}
+    busy_lanes = {lane for _, lane in running}
+    # A job of the problem comes last: its end prevails over the one of the plan.
+    ends = {name: end for name, _, _, end in jobs}
+    planned = {a.task_id: a.start for a in kept}
+
+    def finished(name: str) -> bool:
+        if name not in outstanding:
+            return True  # a requirement found nowhere is already met
+        return name in ends and ends[name] <= now
+
+    def ready(task: Task) -> bool:
+        return all(finished(name) for name in task.requires)
+
+    def far(start: int | None) -> bool:
+        return start is None or start - now > STOPPED_AFTER_S
+
+    def delay(start: int | None) -> int | None:
+        return None if start is None else start - now
+
+    stopped: list[ChainStopped | LaneStopped] = []
+    for chain in path.chains:
+        if path.float_s[chain.task_ids[-1]] > CRITICAL_FLOAT_S:
+            continue
+        if busy_tasks.intersection(chain.task_ids):
+            continue
+        following = next((name for name in chain.task_ids if not finished(name)), None)
+        if following is None:
+            continue
+        start = planned.get(following)
+        if ready(tasks[following]) and far(start):
+            stopped.append(ChainStopped(tasks[following], start, delay(start)))
+
+    for lane in path.critical_lanes:
+        if lane in busy_lanes:
+            continue
+        start = min((a.start for a in kept if a.lane == lane and a.start > now), default=None)
+        waiting = start is not None or any(
+            task.lane == lane and not finished(task.id) and ready(task) for task in problem.tasks
+        )
+        if waiting and far(start):
+            stopped.append(LaneStopped(lane, start, delay(start)))
+    return tuple(stopped)
 
 
 def prioritize_critical(problem: Problem) -> Problem:

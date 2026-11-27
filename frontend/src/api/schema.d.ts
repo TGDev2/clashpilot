@@ -397,6 +397,7 @@ export interface paths {
          *
          *     `next_login_at` is the earliest planned start not before now; every planned assignment
          *     starting then is a `start` action. If it is later than now, a `wait` action comes first.
+         *     `critical_alerts` names the critical chains and lanes standing idle now.
          */
         get: operations["get_recommendations_api_villages__village_id__recommendations_now_get"];
         put?: never;
@@ -620,10 +621,16 @@ export interface components {
             /** At */
             at: number;
             counterfactual: components["schemas"]["Counterfactual"] | null;
+            /** Critical */
+            critical?: boolean | null;
+            /** Date Gain S */
+            date_gain_s?: number | null;
             /** Drawbacks */
             drawbacks: components["schemas"]["Explained"][];
             /** End */
             end?: number | null;
+            /** Float S */
+            float_s?: number | null;
             /** Lane */
             lane?: string | null;
             /** Lane Slot */
@@ -667,6 +674,26 @@ export interface components {
             resource: string;
             /** Tasks */
             tasks: string[];
+        };
+        /**
+         * ChainStoppedOut
+         * @description Nothing of a critical chain runs and its next upgrade, ready, starts more than 15 minutes
+         *     from now; `planned_start` and `delay_s` are null when the plan does not hold it.
+         */
+        ChainStoppedOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "chain_stopped";
+            /** Delay S */
+            delay_s: number | null;
+            /** Name */
+            name: string;
+            /** Planned Start */
+            planned_start: number | null;
+            /** Task Id */
+            task_id: string;
         };
         /** ChangeOut */
         ChangeOut: {
@@ -1186,6 +1213,24 @@ export interface components {
             type: string;
         };
         /**
+         * LaneStoppedOut
+         * @description Nothing runs on a critical lane and its next upgrade starts more than 15 minutes from now;
+         *     `planned_start` and `delay_s` are null when the plan starts none although one is ready.
+         */
+        LaneStoppedOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "lane_stopped";
+            /** Delay S */
+            delay_s: number | null;
+            /** Lane */
+            lane: string;
+            /** Planned Start */
+            planned_start: number | null;
+        };
+        /**
          * LaneWorkOut
          * @description The remaining work of a lane and the earliest date its capacity allows.
          */
@@ -1554,6 +1599,8 @@ export interface components {
         RecommendationsOut: {
             /** Actions */
             actions: components["schemas"]["ActionOut"][];
+            /** Critical Alerts */
+            critical_alerts: (components["schemas"]["ChainStoppedOut"] | components["schemas"]["LaneStoppedOut"])[];
             /** Fictional */
             fictional: boolean;
             /** Now */
