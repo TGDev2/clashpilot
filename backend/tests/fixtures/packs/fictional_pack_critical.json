@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "pack_id": "fictional-test-pack-critical",
+  "game_version": "test-critical-0",
+  "as_of": "2026-01-01",
+  "fictional": true,
+  "sources": [
+    {
+      "id": "s1",
+      "label": "Source fictive de test",
+      "url": "https://example.invalid/fictional-critical-pack",
+      "retrieved_at": "2026-01-01",
+      "license": "CC0-1.0"
+    }
+  ],
+  "items": [
+    {
+      "data_id": 9200001,
+      "name": "Beffroi imaginaire",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "town_hall",
+      "tags": ["town_hall"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200002,
+      "name": "Cabane imaginaire",
+      "kind": "building",
+      "village": "home",
+      "lane": "none",
+      "category": "builder_hut",
+      "tags": ["builder_hut"],
+      "max_count_by_th": {"1": 5}
+    },
+    {
+      "data_id": 9200003,
+      "name": "Atelier des recherches imaginaire",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "laboratory",
+      "tags": ["laboratory"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200004,
+      "name": "Sentinelle de brume",
+      "kind": "hero",
+      "village": "home",
+      "lane": "builder",
+      "category": "hero",
+      "tags": ["hero"],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200005,
+      "name": "Baliste imaginaire",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "defense",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200006,
+      "name": "Catapulte imaginaire",
+      "kind": "building",
+      "village": "home",
+      "lane": "builder",
+      "category": "defense",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200007,
+      "name": "Eclaireur imaginaire",
+      "kind": "troop",
+      "village": "home",
+      "lane": "lab",
+      "category": "troop",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    },
+    {
+      "data_id": 9200008,
+      "name": "Sapeur imaginaire",
+      "kind": "troop",
+      "village": "home",
+      "lane": "lab",
+      "category": "troop",
+      "tags": [],
+      "max_count_by_th": {"1": 1}
+    }
+  ],
+  "levels": [
+    {"data_id": 9200001, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9200001, "level": 2, "duration_s": 172800, "cost": {"gold": 9000}, "requires": [], "source": "s1"},
+    {"data_id": 9200002, "level": 1, "duration_s": 60, "cost": {}, "requires": [], "source": "s1"},
+    {"data_id": 9200003, "level": 1, "duration_s": 60, "cost": {"elixir": 100}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200003, "level": 2, "duration_s": 86400, "cost": {"elixir": 2000}, "requires": [{"data_id": 9200001, "level": 2}], "source": "s1"},
+    {"data_id": 9200004, "level": 1, "duration_s": 60, "cost": {"dark_elixir": 100}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200004, "level": 2, "duration_s": 518400, "cost": {"dark_elixir": 200}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200004, "level": 3, "duration_s": 604800, "cost": {"dark_elixir": 300}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200004, "level": 4, "duration_s": 691200, "cost": {"dark_elixir": 400}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200004, "level": 5, "duration_s": 777600, "cost": {"dark_elixir": 500}, "requires": [{"data_id": 9200001, "level": 1}], "source": "s1"},
+    {"data_id": 9200005, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9200005, "level": 2, "duration_s": 86400, "cost": {"gold": 1000}, "requires": [], "source": "s1"},
+    {"data_id": 9200006, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9200006, "level": 2, "duration_s": 86401, "cost": {"gold": 1500}, "requires": [], "source": "s1"},
+    {"data_id": 9200007, "level": 1, "duration_s": 60, "cost": {"elixir": 100}, "requires": [{"data_id": 9200003, "level": 1}], "source": "s1"},
+    {"data_id": 9200007, "level": 2, "duration_s": 86400, "cost": {"elixir": 500}, "requires": [{"data_id": 9200003, "level": 1}], "source": "s1"},
+    {"data_id": 9200007, "level": 3, "duration_s": 172800, "cost": {"elixir": 800}, "requires": [{"data_id": 9200003, "level": 1}], "source": "s1"},
+    {"data_id": 9200008, "level": 1, "duration_s": 60, "cost": {"elixir": 100}, "requires": [{"data_id": 9200003, "level": 1}], "source": "s1"},
+    {"data_id": 9200008, "level": 2, "duration_s": 86400, "cost": {"elixir": 600}, "requires": [{"data_id": 9200003, "level": 1}], "source": "s1"}
+  ],
+  "storage": [],
+  "rules": {}
+}

@@ -1,0 +1,18 @@
+{
+  "tag": "#FICTIFCRIT",
+  "timestamp": 1795762800,
+  "buildings": [
+    {"data": 9200001, "lvl": 1},
+    {"data": 9200002, "lvl": 1, "cnt": 5},
+    {"data": 9200003, "lvl": 1},
+    {"data": 9200005, "lvl": 1},
+    {"data": 9200006, "lvl": 1}
+  ],
+  "units": [
+    {"data": 9200007, "lvl": 1},
+    {"data": 9200008, "lvl": 1}
+  ],
+  "heroes": [
+    {"data": 9200004, "lvl": 1}
+  ]
+}
