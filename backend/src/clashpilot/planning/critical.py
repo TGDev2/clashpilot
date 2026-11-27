@@ -40,6 +40,7 @@ from clashpilot.planning.simulate import (
 )
 
 MAX_CHAINS = 3
+CRITICAL_FLOAT_S = 300  # a task with at most this float is critical
 _MAX_STEPS = 10_000  # safety cap of the search of a valid start; each step moves forward
 
 Interval = tuple[int, int]
@@ -66,6 +67,7 @@ class Chain:
 @dataclass(frozen=True)
 class CriticalPath:
     target: Task | None
+    work_s: Mapping[str, int]  # remaining work of each lane of `work_finish`
     work_finish: Mapping[str, int]
     set_finish: int | None
     finish_after: int | None  # the town hall started once the set is done
@@ -193,18 +195,21 @@ def _ceil_div(amount: int, divisor: int) -> int:
     return -(-amount // divisor)
 
 
-def _work_finish(
-    problem: Problem, members: Sequence[Task], early: Mapping[str, _Early]
-) -> dict[str, int]:
+def _work(problem: Problem, members: Sequence[Task], early: Mapping[str, _Early]) -> dict[str, int]:
+    """Remaining seconds of work of each lane holding a task of the set."""
     work: dict[str, int] = {}
     for task in members:
         work[task.lane] = work.get(task.lane, 0) + early[task.id].finish - early[task.id].start
     for job in problem.frozen:
         if job.lane in work and not job.extra:
             work[job.lane] += max(0, job.end - problem.now)
+    return dict(sorted(work.items()))
+
+
+def _work_finish(problem: Problem, work: Mapping[str, int]) -> dict[str, int]:
     return {
         lane: problem.now + _ceil_div(total, max(1, problem.lanes.get(lane, 1)))
-        for lane, total in sorted(work.items())
+        for lane, total in work.items()
     }
 
 
@@ -248,6 +253,7 @@ def _chains(members: Sequence[Task], early: Mapping[str, _Early]) -> tuple[Chain
 def _empty() -> CriticalPath:
     return CriticalPath(
         target=None,
+        work_s={},
         work_finish={},
         set_finish=None,
         finish_after=None,
@@ -269,7 +275,8 @@ def critical_path(problem: Problem, skip_lanes: Iterable[str] = ()) -> CriticalP
     current = frozenset(current_level_ids(problem.tasks, skip_lanes))
     members = [task for task in problem.tasks if task.id in current]
 
-    work_finish = _work_finish(problem, members, early)
+    work = _work(problem, members, early)
+    work_finish = _work_finish(problem, work)
     chain_end = max((early[task.id].finish for task in members), default=problem.now)
     work_end = max(work_finish.values(), default=problem.now)
     set_finish = max(chain_end, work_end)
@@ -291,6 +298,7 @@ def critical_path(problem: Problem, skip_lanes: Iterable[str] = ()) -> CriticalP
             floats[task.id] = 0
     return CriticalPath(
         target=target,
+        work_s=work,
         work_finish=work_finish,
         set_finish=set_finish,
         finish_after=finish_after,

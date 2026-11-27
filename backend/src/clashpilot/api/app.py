@@ -16,6 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from clashpilot.api.errors import error_detail, register_error_handlers
 from clashpilot.api.routers import (
     calendar,
+    critical,
     forecast,
     gamedata,
     items,
@@ -120,6 +121,7 @@ def create_app(
     app.include_router(forecast.router)
     app.include_router(scenarios.router)
     app.include_router(items.router)
+    app.include_router(critical.router)
     app.include_router(meta.router)
 
     # Future routers are included above this line; the SPA fallback stays last.

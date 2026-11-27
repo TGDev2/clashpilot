@@ -147,6 +147,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/critical-path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Critical Path
+         * @description The chains and lanes that fix the date of the next town hall, and the float of each task.
+         *
+         *     `skip_lanes` (repeatable) names the lanes the town hall does not wait for.
+         */
+        get: operations["get_critical_path_api_villages__village_id__critical_path_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/diff": {
         parameters: {
             query?: never;
@@ -737,6 +759,92 @@ export interface components {
             /** Score Delta */
             score_delta: number;
         };
+        /**
+         * CriticalBoundOut
+         * @description What fixes the date: a chain of upgrades, or the work of `lane`.
+         */
+        CriticalBoundOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chain" | "work";
+            /** Lane */
+            lane: string | null;
+        };
+        /**
+         * CriticalChainOut
+         * @description A longest path, ending with the upgrades of `data_id` from `from_level` to `to_level`.
+         */
+        CriticalChainOut: {
+            /** Data Id */
+            data_id: number;
+            finish: components["schemas"]["Estimate"];
+            /** From Level */
+            from_level: number;
+            /** Name */
+            name: string;
+            /** Task Ids */
+            task_ids: string[];
+            /** To Level */
+            to_level: number;
+        };
+        /**
+         * CriticalPathOut
+         * @description `finish_after`: the town hall started once the set is done; `finish_parallel`: run next to
+         *     it. `calendar_wait_s` is the time the first chain waits for the schedule, null without chain.
+         */
+        CriticalPathOut: {
+            bound: components["schemas"]["CriticalBoundOut"] | null;
+            /** Calendar Wait S */
+            calendar_wait_s: number | null;
+            /** Chains */
+            chains: components["schemas"]["CriticalChainOut"][];
+            /** Critical Lanes */
+            critical_lanes: string[];
+            finish_after: components["schemas"]["Estimate"];
+            finish_parallel: components["schemas"]["Estimate"];
+            set_finish: components["schemas"]["Estimate"];
+            /** Skip Lanes */
+            skip_lanes: string[];
+            target: components["schemas"]["CriticalTargetOut"] | null;
+            /** Tasks */
+            tasks: components["schemas"]["CriticalTaskOut"][];
+            /** Work Finish */
+            work_finish: components["schemas"]["LaneWorkOut"][];
+        };
+        /**
+         * CriticalTargetOut
+         * @description The next town hall upgrade.
+         */
+        CriticalTargetOut: {
+            /** Data Id */
+            data_id: number;
+            /** Name */
+            name: string;
+            /** Task Id */
+            task_id: string;
+            /** To Level */
+            to_level: number;
+        };
+        /**
+         * CriticalTaskOut
+         * @description `float_s`: how long the task may slip without moving the date.
+         */
+        CriticalTaskOut: {
+            /** Critical */
+            critical: boolean;
+            /** Float S */
+            float_s: number;
+            /** Lane */
+            lane: string;
+            /** Name */
+            name: string;
+            /** Task Id */
+            task_id: string;
+            /** To Level */
+            to_level: number;
+        };
         /** DeclaredRate */
         DeclaredRate: {
             /** Expected */
@@ -1076,6 +1184,19 @@ export interface components {
             task_id: string | null;
             /** Type */
             type: string;
+        };
+        /**
+         * LaneWorkOut
+         * @description The remaining work of a lane and the earliest date its capacity allows.
+         */
+        LaneWorkOut: {
+            /** Capacity */
+            capacity: number;
+            finish: components["schemas"]["Estimate"];
+            /** Lane */
+            lane: string;
+            /** Work S */
+            work_s: number;
         };
         /** LevelOut */
         LevelOut: {
@@ -2357,6 +2478,57 @@ export interface operations {
                 };
             };
             /** @description Not an export (code invalid_export). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_critical_path_api_villages__village_id__critical_path_get: {
+        parameters: {
+            query?: {
+                skip_lanes?: string[] | null;
+            };
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CriticalPathOut"];
+                };
+            };
+            /** @description Unknown village (code village_not_found). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_lane or invalid_request. */
             422: {
                 headers: {
                     [name: string]: unknown;
