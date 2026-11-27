@@ -37,6 +37,47 @@ export function TextInput({ label, value, onChange, type = "text", hint, min }: 
   );
 }
 
+/** A native checkbox: the label is the accessible name, the hint its description. */
+export function CheckboxInput({
+  label,
+  checked,
+  onChange,
+  disabled = false,
+  hint,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  hint?: string | undefined;
+}) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          aria-describedby={hint === undefined ? undefined : hintId}
+          onChange={(event) => onChange(event.currentTarget.checked)}
+          className="size-4 shrink-0 accent-signal disabled:cursor-not-allowed"
+        />
+        <label htmlFor={id} className={disabled ? "text-mist" : undefined}>
+          {label}
+        </label>
+      </div>
+      {hint !== undefined && (
+        <p id={hintId} className="pl-6 text-xs text-mist">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** A native select; its options are `[value, label]` pairs. */
 export function SelectInput({
   label,

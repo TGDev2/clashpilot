@@ -3,6 +3,7 @@ import { Link } from "react-aria-components";
 import { api, type Provenance, settle } from "../api/client";
 import { useApi } from "../api/useApi";
 import { useLatestPlan } from "../api/usePlan";
+import { CriticalPathCard } from "../components/CriticalPathCard";
 import { PlanProgress } from "../components/PlanProgress";
 import { ProvenanceBadge } from "../components/ProvenanceBadge";
 import { StaleBanner } from "../components/replan/StaleBanner";
@@ -97,6 +98,13 @@ export function Dashboard() {
         <ProblemAlert problem={state.problem} />
         {villageId !== null && plan.data?.stale === true && (
           <StaleBanner villageId={villageId} planId={plan.data.plan_id} onReplanned={plan.reload} />
+        )}
+        {villageId !== null && (
+          <CriticalPathCard
+            villageId={villageId}
+            skipLanes={plan.data?.town_hall_skip_lanes ?? []}
+            ready={!plan.loading}
+          />
         )}
         {plan.data !== undefined && (
           <Section title={fr.dashboard.progress}>

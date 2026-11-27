@@ -37,9 +37,12 @@ export function NoPlan({ hasVillage }: { hasVillage: boolean }) {
  */
 export function PlanGate({
   title,
+  zoneNote = true,
   children,
 }: {
   title: string;
+  /** False for a page that does not show its times in the zone of the plan. */
+  zoneNote?: boolean;
   children: (plan: PlanOut) => ReactNode;
 }) {
   const { villageId } = useVillage();
@@ -60,7 +63,7 @@ export function PlanGate({
         {plan !== undefined && !noPlan && (
           <>
             {plan.pack.fictional && <Banner>{fr.dashboard.fictionalBanner}</Banner>}
-            <p className="text-xs text-mist">{fr.now.timeIn(plan.timezone)}</p>
+            {zoneNote && <p className="text-xs text-mist">{fr.now.timeIn(plan.timezone)}</p>}
             {children(plan)}
           </>
         )}

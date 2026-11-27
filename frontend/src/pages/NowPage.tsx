@@ -4,6 +4,7 @@ import {
   type ActionOut,
   type ApiProblem,
   api,
+  type CriticalAlertOut,
   type PlanOut,
   planBody,
   type RecommendationsOut,
@@ -11,12 +12,13 @@ import {
   settle,
 } from "../api/client";
 import { useApi } from "../api/useApi";
+import { useLatestPlan } from "../api/usePlan";
 import { ProofLabel } from "../components/ProofLabel";
 import { ActionControls } from "../components/replan/ActionControls";
 import { ConsequenceMessages } from "../components/replan/ChangesPanel";
-import { Banner, Button, PageTitle, ProblemAlert, Section } from "../components/ui";
+import { Banner, Button, PageTitle, ProblemAlert, Section, Tag } from "../components/ui";
 import { fr } from "../i18n/fr";
-import { formatInZone } from "../lib/format";
+import { formatDuration, formatInZone, laneSubject } from "../lib/format";
 import { uniqueKeys } from "../lib/keys";
 import { useVillage } from "../state/village";
 
@@ -41,13 +43,56 @@ function Messages({ title, items }: { title?: string; items: Explained[] }) {
   );
 }
 
+/**
+ * What a start action weighs on the town hall date (critical, or its slack, and the time it saves)
+ * and whether it researches a unit of the composition. Nothing for a wait.
+ */
+function ActionTags({ action, ownUnit }: { action: ActionOut; ownUnit: boolean }) {
+  if (action.action !== "start") {
+    return null;
+  }
+  const slack = action.float_s ?? null;
+  const gain = action.date_gain_s ?? 0;
+  return (
+    <p className="flex flex-wrap gap-2">
+      {action.critical === true ? (
+        <Tag tone="critical">{fr.now.critical}</Tag>
+      ) : (
+        slack !== null && <Tag tone="quiet">{fr.now.slack(formatDuration(slack))}</Tag>
+      )}{" "}
+      {gain > 0 && <Tag tone="gain">{fr.now.dateGain(formatDuration(gain))}</Tag>}{" "}
+      {ownUnit && <Tag tone="own">{fr.now.ownUnit}</Tag>}
+    </p>
+  );
+}
+
+/** A critical chain or lane standing idle, with the idle time the plan already holds. */
+function StoppedAlert({ alert }: { alert: CriticalAlertOut }) {
+  const subject = alert.code === "chain_stopped" ? alert.name : laneSubject(alert.lane);
+  const sentence = fr.now.stopped(
+    subject.charAt(0).toUpperCase() + subject.slice(1),
+    // "Les ouvriers" is the only plural lane name.
+    alert.code === "lane_stopped" && alert.lane === "builder",
+  );
+  return (
+    <div role="alert" className="rounded-lg border border-estimated/60 bg-estimated/10 p-3 text-sm">
+      <p>
+        {sentence}
+        {alert.delay_s !== null && <> {fr.now.plannedDelay(formatDuration(alert.delay_s))}</>}
+      </p>
+    </div>
+  );
+}
+
 function ActionCard({
   action,
   timezone,
+  ownUnit,
   controls,
 }: {
   action: ActionOut;
   timezone: string;
+  ownUnit: boolean;
   controls?: ReactNode;
 }) {
   const waiting = action.action === "wait";
@@ -64,7 +109,8 @@ function ActionCard({
               ({fr.now.until} {formatInZone(action.end, timezone)})
             </>
           )}{" "}
-        </p>
+        </p>{" "}
+        <ActionTags action={action} ownUnit={ownUnit} />
       </header>{" "}
       <Messages title={fr.now.why} items={action.why.reasons} />{" "}
       <Messages title={fr.now.advantages} items={action.advantages} />{" "}
@@ -125,6 +171,14 @@ export function NowPage() {
   const [lastPlan, setLastPlan] = useState<PlanOut | undefined>();
   const [problem, setProblem] = useState<ApiProblem | undefined>();
   const [applied, setApplied] = useState<ReplanOut | undefined>();
+  // The composition of the latest plan, read again when the recommendations move to a new plan.
+  const latest = useLatestPlan(villageId, String(reco.data?.plan_id ?? ""));
+  const composition = new Set(latest.data?.composition ?? []);
+  const ownTasks = new Set(
+    (latest.data?.assignments ?? [])
+      .filter((assignment) => composition.has(assignment.data_id))
+      .map((assignment) => assignment.task_id),
+  );
 
   async function compute() {
     if (villageId === null) {
@@ -205,6 +259,12 @@ export function NowPage() {
           </Section>
         )}
         {noPlan && lastPlan === undefined && <p className="text-mist">{fr.now.noPlan}</p>}
+        {(answer?.critical_alerts ?? []).map((alert) => (
+          <StoppedAlert
+            key={alert.code === "chain_stopped" ? alert.task_id : alert.lane}
+            alert={alert}
+          />
+        ))}
         {answer !== undefined && (
           <Section title={fr.now.actions}>
             <p className="text-xs text-mist">{fr.now.timeIn(answer.timezone)}</p>
@@ -217,6 +277,7 @@ export function NowPage() {
                     key={actionKeys[index]}
                     action={action}
                     timezone={answer.timezone}
+                    ownUnit={action.task_id !== null && ownTasks.has(action.task_id)}
                     controls={
                       villageId !== null && action.action === "start" ? (
                         <ActionControls

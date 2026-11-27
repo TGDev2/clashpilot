@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { CheckboxInput } from "../../components/forms";
 import { Section } from "../../components/ui";
 import { fr } from "../../i18n/fr";
 import {
@@ -13,30 +14,6 @@ type Permission = "granted" | "denied" | "default" | "unavailable";
 
 function currentPermission(): Permission {
   return typeof Notification === "undefined" ? "unavailable" : Notification.permission;
-}
-
-function Checkbox({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  const id = useId();
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-        className="size-4 accent-signal"
-      />
-      <label htmlFor={id}>{label}</label>
-    </div>
-  );
 }
 
 /**
@@ -83,7 +60,7 @@ export function NotificationsPanel() {
     <Section title={fr.settings.notifications.title}>
       <p className="text-sm text-bone">{fr.settings.notifications.onlyWhenOpen}</p>
       <p className="text-sm text-mist">{fr.settings.notifications.installHint}</p>
-      <Checkbox
+      <CheckboxInput
         label={fr.settings.notifications.enable}
         checked={settings.enabled}
         onChange={toggleEnabled}
@@ -108,7 +85,7 @@ export function NotificationsPanel() {
           {fr.settings.notifications.kinds}
         </legend>
         {REMINDER_LANES.map((lane) => (
-          <Checkbox
+          <CheckboxInput
             key={lane}
             label={fr.lanes[lane]}
             checked={settings.kinds.includes(lane)}

@@ -60,6 +60,43 @@ la page **Importer**, section « Données de jeu », puis activez-le. Un pack ne
 4. Renseignez vos horaires dans **Réglages**, puis calculez votre plan dans **Que faire
    maintenant ?**.
 
+## Date d'Hôtel de Ville et chemin critique
+
+**La date au plus tôt.** Le tableau de bord estime quand le prochain Hôtel de Ville peut être fini.
+Il distingue la date « au plus tôt », où l'Hôtel de Ville avance en parallèle des autres
+améliorations, de la date obtenue s'il attend que tout le niveau actuel soit terminé. La date est
+fixée soit par la plus longue chaîne d'améliorations dépendantes, soit par le travail restant d'une
+file (ouvriers, laboratoire, forge, maison des animaux). Vos horaires de jeu sont pris en compte :
+une amélioration ne se lance pas pendant que vous dormez.
+
+**La marge.** La marge d'une amélioration est le retard qu'elle peut prendre sans repousser la date.
+Une amélioration est « critique » quand sa marge ne dépasse pas cinq minutes, ou quand sa file ne
+doit jamais s'arrêter. La page **Que faire maintenant ?** signale les actions critiques, la marge des
+autres et les chaînes ou les files critiques à l'arrêt.
+
+**L'option `critical_path`.** La case « Viser la date d'HDV au plus tôt » de la page **Stratégie**
+envoie l'option `critical_path` avec le calcul du plan : les améliorations passent avant les autres
+d'autant plus que leur marge est faible. L'option est désactivée par défaut et ne change que les
+priorités du plan. La case « L'Hôtel de Ville n'attend pas le laboratoire » retire les recherches de
+ce que l'Hôtel de Ville attend.
+
+**La page « Quand lancer l'Hôtel de Ville ? » (`/hdv`).** Elle compare le lancement après tout le
+reste, le lancement dès qu'un ouvrier resterait inactif et, quand une réduction de durée se termine
+entre-temps, le lancement juste avant sa fin. Chaque option montre le lancement et la fin, le temps
+d'inactivité des ouvriers, ce qui reste non fini à l'arrivée et le niveau des héros. La page ne
+recommande aucune option, et rien n'est enregistré.
+
+**Les limites.**
+
+- La date d'une chaîne est calculée sans la capacité des files ni les ressources : elle suppose un
+  ouvrier libre et un stock suffisant à chaque étape. La capacité n'intervient que dans la borne de
+  travail de chaque file, et les ressources dans aucune des deux : la date réelle peut être plus
+  tardive.
+- La marge est calculée sans les horaires de jeu.
+- Toutes ces dates sont des estimations, qui changent avec votre export, votre saisie manuelle et
+  vos horaires. La comparaison de la page `/hdv` repose sur des plans simulés, établis sur le dernier
+  plan calculé.
+
 ## Accès depuis le réseau local (`CLASHPILOT_HOST`)
 
 Par défaut le serveur n'écoute que `127.0.0.1` : seul cet ordinateur y accède. Pour l'ouvrir depuis

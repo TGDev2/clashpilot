@@ -17,6 +17,7 @@ export const fr = {
     calendar: "Calendrier",
     builders: "Constructeurs",
     strategy: "Stratégie",
+    townHall: "Lancer l'HDV",
     resources: "Ressources",
     scenarios: "Scénarios",
     items: "Objets magiques",
@@ -41,6 +42,68 @@ export const fr = {
     goalLevel: "Niveau du but",
     invalidGoal: "Indiquez l'identifiant et le niveau du but (entiers positifs).",
     needVillage: "Importez d'abord un village pour calculer un plan.",
+    townHallTitle: "Hôtel de Ville",
+    criticalPath: "Viser la date d'HDV au plus tôt",
+    skipLab: "L'Hôtel de Ville n'attend pas le laboratoire",
+    compositionFirst: "Laboratoire : ma composition d'abord",
+    compositionFirstHint: "Choisis d'abord tes troupes et tes sorts",
+  },
+  criticalPath: {
+    title: "Prochain Hôtel de Ville",
+    loading: "Calcul de la date…",
+    earliest: (level: number) => `Hôtel de Ville ${level} au plus tôt :`,
+    after: "Si l'HDV attend tout le reste :",
+    fixedBy: (cause: string) => `Fixée par : ${cause}`,
+    chains: "Chaînes les plus longues",
+    chain: (name: string, from: number, to: number) => `${name} : niveau ${from} → ${to}`,
+    lanes: "Travail restant par file",
+    laneEnd: (date: string) => `jusqu'au ${date}`,
+    laneName: {
+      builder: "Ouvriers",
+      lab: "Laboratoire",
+      blacksmith: "Forge",
+      pet_house: "Maison des animaux",
+    },
+    laneSubject: {
+      builder: "les ouvriers",
+      lab: "le laboratoire",
+      blacksmith: "la forge",
+      pet_house: "la maison des animaux",
+    },
+    neverStop: "Ne doit jamais s'arrêter",
+    sleepDelay: (duration: string) => `Le sommeil retarde cette date de ${duration}`,
+    noTarget: "Aucun Hôtel de Ville à améliorer",
+    labSkipped: "Le laboratoire n'est pas attendu",
+  },
+  townHall: {
+    title: "Quand lancer l'Hôtel de Ville ?",
+    intro:
+      "Comparez plusieurs moments de lancement : chaque option est un plan simulé et rien n'est enregistré. La décision vous revient.",
+    compare: "Comparer",
+    comparing: "Comparaison en cours…",
+    result: (level: number) => `Hôtel de Ville ${level} : les moments de lancement`,
+    kinds: {
+      after: "Après tout le reste",
+      no_wait: "Sans ouvrier inactif",
+      discount_edge: "À la fin de la réduction",
+    },
+    start: "Lancement :",
+    finish: "Fin :",
+    idle: "Ouvriers inactifs :",
+    unfinished: "Non fini à l'arrivée",
+    nothingUnfinished: "Aucune amélioration du niveau actuel.",
+    labLeft: (count: number, duration: string) =>
+      `${count} ${count === 1 ? "recherche" : "recherches"}, ${duration} de labo`,
+    laneLeft: (lane: string, count: number, duration: string) =>
+      `${lane} : ${count} ${count === 1 ? "amélioration" : "améliorations"}, ${duration}`,
+    compositionLeft: (count: number, duration: string) =>
+      count === 1
+        ? `1 recherche de ta compo non finie (${duration})`
+        : `${count} recherches de ta compo non finies (${duration})`,
+    gap: (signed: string) =>
+      `Écart avec « Après tout le reste », en éléments non finis : ${signed}`,
+    heroes: "Héros à l'arrivée",
+    hero: (name: string, level: number) => `${name} : niveau ${level}`,
   },
   forecast: {
     title: "Ressources",
@@ -354,6 +417,13 @@ export const fr = {
     missingManual: "Compléter la saisie manuelle",
     missingSchedule: "Renseigner mes horaires",
     noActions: "Aucune action à lancer pour l'instant.",
+    critical: "Critique",
+    slack: (duration: string) => `Marge ${duration}`,
+    dateGain: (duration: string) => `Avance ta date de ${duration}`,
+    ownUnit: "Ta compo",
+    stopped: (subject: string, plural: boolean) =>
+      `${subject} ${plural ? "sont" : "est"} à l'arrêt : chaque heure d'arrêt retarde ton Hôtel de Ville`,
+    plannedDelay: (duration: string) => `(${duration} prévues)`,
   },
   replan: {
     launched: "Je l'ai lancée",
