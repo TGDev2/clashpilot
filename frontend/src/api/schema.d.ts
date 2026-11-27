@@ -1430,6 +1430,11 @@ export interface components {
             /** Composition */
             composition?: number[];
             /**
+             * Composition First
+             * @default false
+             */
+            composition_first: boolean;
+            /**
              * Critical Path
              * @default false
              */
@@ -1469,6 +1474,8 @@ export interface components {
             strategy?: string | null;
             /** Timezone */
             timezone: string;
+            /** Town Hall Skip Lanes */
+            town_hall_skip_lanes?: string[];
             /** War Windows */
             war_windows?: components["schemas"]["WarWindow"][];
             /** Warnings */
@@ -1478,6 +1485,11 @@ export interface components {
         PlanRequest: {
             /** Composition */
             composition?: number[];
+            /**
+             * Composition First
+             * @default false
+             */
+            composition_first: boolean;
             /**
              * Critical Path
              * @default false
@@ -1492,6 +1504,8 @@ export interface components {
             profile?: ("fast" | "repro") | null;
             /** Strategy */
             strategy?: string | null;
+            /** Town Hall Skip Lanes */
+            town_hall_skip_lanes?: string[];
             /** War Windows */
             war_windows?: components["schemas"]["WarWindow"][];
         };
@@ -3036,7 +3050,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Code unknown_engine, unknown_strategy, invalid_goal or invalid_request. */
+            /** @description Code unknown_engine, unknown_strategy, invalid_goal, unknown_lane or invalid_request. */
             422: {
                 headers: {
                     [name: string]: unknown;

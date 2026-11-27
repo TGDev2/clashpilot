@@ -7,7 +7,9 @@ than the one it was computed on is imported; the event `snapshot_imported` repla
 
 A plan may name a strategy of `GET /api/meta/strategies` with an army composition, a goal and war
 windows (E16): the plan carries them back, and every replanning applies them again. The same holds
-for `critical_path` (E24, false by default): the task values grow with their criticality.
+for `critical_path` (E24, false by default): the task values grow with their criticality, and
+for the options of E29: `town_hall_skip_lanes` (empty by default; a lane the compiled problem does
+not know is a 422 `unknown_lane`) and `composition_first` (false by default).
 
 The recommendations also say how critical each start is, and which critical chains or lanes stand
 idle (E25): the latest plan is compiled again at its own `now`, with its strategy, for
@@ -49,6 +51,7 @@ from clashpilot.planning.service import (
     InvalidPlanError,
     PlanInputs,
     UnknownEngineError,
+    UnknownLaneError,
     UnknownStrategyError,
     create_plan,
     resolve_params,
@@ -95,6 +98,8 @@ class PlanRequest(BaseModel):
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
     critical_path: bool = False
+    town_hall_skip_lanes: list[str] = Field(default_factory=list)
+    composition_first: bool = False
 
 
 class ProofOut(BaseModel):
@@ -153,6 +158,8 @@ class PlanOut(BaseModel):
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
     critical_path: bool = False
+    town_hall_skip_lanes: list[str] = Field(default_factory=list)
+    composition_first: bool = False
 
 
 class Explained(BaseModel):
@@ -421,6 +428,8 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
             goal=None if payload.goal is None else (payload.goal.data_id, payload.goal.level),
             war_windows=[(window.start, window.end) for window in payload.war_windows],
             critical_path=payload.critical_path,
+            town_hall_skip_lanes=payload.town_hall_skip_lanes,
+            composition_first=payload.composition_first,
         )
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
@@ -451,6 +460,8 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
         raise _unknown_strategy(error) from None
     except MissingInputError as error:
         raise _missing_input(error) from None
+    except UnknownLaneError as error:
+        raise ApiError(422, "unknown_lane", f"File inconnue : {', '.join(error.lanes)}.") from None
     except InvalidPlanError as error:
         raise _invalid_plan(error) from None
     with open_db(_data_dir(request)) as connection:
@@ -467,8 +478,8 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
         409: {"model": ErrorBody, "description": "Code missing_input or no_active_pack."},
         422: {
             "model": ErrorBody,
-            "description": "Code unknown_engine, unknown_strategy, invalid_goal or "
-            "invalid_request.",
+            "description": "Code unknown_engine, unknown_strategy, invalid_goal, unknown_lane "
+            "or invalid_request.",
         },
         500: {"model": ErrorBody, "description": "The engine plan is invalid (invalid_plan)."},
     },

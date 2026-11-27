@@ -22,7 +22,12 @@ from clashpilot.api.routers.forecast import Estimate
 from clashpilot.api.routers.gamedata import ErrorBody
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.planning.compile import MissingInputError
-from clashpilot.planning.critical import CRITICAL_FLOAT_S, CriticalPath, critical_path
+from clashpilot.planning.critical import (
+    CRITICAL_FLOAT_S,
+    CriticalPath,
+    critical_path,
+    unknown_lanes,
+)
 from clashpilot.planning.forecast import estimate
 from clashpilot.planning.model import Problem
 from clashpilot.planning.service import PlanInputs, compile_inputs
@@ -212,9 +217,7 @@ def _critical_path(request: Request, village_id: str, skip_lanes: list[str]) -> 
             "Des données manquent pour le chemin critique : " + ", ".join(error.missing) + ".",
             extra={"missing": list(error.missing)},
         ) from None
-    # A lane may hold tasks before the village owns its building: it is known all the same.
-    known = set(problem.lanes) | {task.lane for task in problem.tasks}
-    unknown = sorted(set(skip_lanes) - known)
+    unknown = unknown_lanes(problem, skip_lanes)
     if unknown:
         raise ApiError(422, "unknown_lane", f"File inconnue : {', '.join(unknown)}.")
     return _document(inputs.pack, problem, critical_path(problem, skip_lanes), skip_lanes)

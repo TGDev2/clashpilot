@@ -27,13 +27,14 @@ export type SchedulePreview = {
 };
 
 type PlanRequest = components["schemas"]["PlanRequest"];
+/** The boolean options of `POST .../plans` that default to false on the server. */
+type PlanFlags = "critical_path" | "composition_first";
 /**
- * A `POST .../plans` body. The server gives `critical_path` its default (false) when it is left
- * out, although the generated type marks it required: openapi-typescript drops the `?` of any
- * field with a default.
+ * A `POST .../plans` body. The server gives `critical_path` and `composition_first` their default
+ * (false) when they are left out, although the generated type marks them required:
+ * openapi-typescript drops the `?` of any field with a default.
  */
-export type PlanBody = Omit<PlanRequest, "critical_path"> &
-  Partial<Pick<PlanRequest, "critical_path">>;
+export type PlanBody = Omit<PlanRequest, PlanFlags> & Partial<Pick<PlanRequest, PlanFlags>>;
 
 /** `body` as the typed client expects it; the fields left out take their server defaults. */
 export function planBody(body: PlanBody): PlanRequest {

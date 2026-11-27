@@ -270,6 +270,15 @@ def _empty() -> CriticalPath:
     )
 
 
+def unknown_lanes(problem: Problem, lanes: Iterable[str]) -> tuple[str, ...]:
+    """The names of `lanes` the problem does not know, sorted.
+
+    A lane may hold tasks before the village owns its building: it is known all the same.
+    """
+    known = set(problem.lanes) | {task.lane for task in problem.tasks}
+    return tuple(sorted(set(lanes) - known))
+
+
 def critical_path(problem: Problem, skip_lanes: Iterable[str] = ()) -> CriticalPath:
     """The critical path towards the town hall task of smallest level (see the module text)."""
     town_halls = [task for task in problem.tasks if TOWN_HALL_TAG in task.tags]
@@ -419,10 +428,11 @@ def stopped_work(
     return tuple(stopped)
 
 
-def prioritize_critical(problem: Problem) -> Problem:
+def prioritize_critical(problem: Problem, skip_lanes: Iterable[str] = ()) -> Problem:
     """The problem with each task's value raised by its criticality (plan option `critical_path`).
 
-    Only `Task.value` changes, and only for the tasks `critical_path(problem)` gives a float to.
+    Only `Task.value` changes, and only for the tasks `critical_path(problem, skip_lanes)` gives a
+    float to: the tasks of `skip_lanes` (plan option `town_hall_skip_lanes`) are never raised.
     With `r` the largest `value / max(1, duration_s)` of the problem, `T` the sum of the values
     and `f` the float of a task in seconds:
 
@@ -437,7 +447,7 @@ def prioritize_critical(problem: Problem) -> Problem:
     hold no logic of their own for it. A problem without town hall task, or whose values are all
     zero, comes back unchanged.
     """
-    floats = critical_path(problem).float_s
+    floats = critical_path(problem, skip_lanes).float_s
     total = sum(task.value for task in problem.tasks)
     if not floats or total <= 0:
         return problem

@@ -64,6 +64,7 @@ from clashpilot.planning.service import (
     compile_inputs,
     describe,
     engine,
+    hash_options,
     input_hash,
     planner_config,
     strategy_objective,
@@ -201,7 +202,7 @@ def _keeps(
             params.engine,
             params.profile,
             seed,
-            critical_path=params.critical_path,
+            **hash_options(params),
         )
         if digest != previous.input_hash:
             return False

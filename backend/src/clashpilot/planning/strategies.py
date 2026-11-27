@@ -30,6 +30,8 @@ from clashpilot.planning.objective import Objective
 
 STRATEGIES_PATH = Path(__file__).with_name("strategies.json")
 TOWN_HALL_TAG = "town_hall"
+BUILDER_LANE = "builder"
+COMPOSITION_FIRST_FACTOR = 2.0  # plan option `composition_first`
 
 TOWN_HALL_LAST = "town_hall_last"
 WAR_WINDOWS = "war_windows"
@@ -170,14 +172,18 @@ def apply_strategy(
     *,
     goal: Goal | None = None,
     war_windows: Sequence[tuple[int, int]] = (),
+    town_hall_skip_lanes: Iterable[str] = (),
 ) -> tuple[Problem, Objective]:
-    """The problem as `strategy` sees it, and the objective of its weights."""
+    """The problem as `strategy` sees it, and the objective of its weights.
+
+    Under `town_hall_last`, a town hall does not wait for the tasks of `town_hall_skip_lanes`.
+    """
     chosen = frozenset(composition)
     tasks: tuple[Task, ...] = tuple(
         dataclasses.replace(task, value=_value(task, strategy, chosen)) for task in problem.tasks
     )
     if TOWN_HALL_LAST in strategy.constraints:
-        tasks = _town_hall_last(tasks)
+        tasks = _town_hall_last(tasks, town_hall_skip_lanes)
     blackouts = problem.hero_blackouts
     if WAR_WINDOWS in strategy.constraints:
         blackouts = tuple(sorted((int(start), int(end)) for start, end in war_windows))
@@ -188,3 +194,31 @@ def apply_strategy(
         hero_blackouts=blackouts,
     )
     return applied, strategy.objective()
+
+
+def prioritize_composition(problem: Problem, composition: Iterable[int]) -> Problem:
+    """The problem with the research of the army composition first (plan option
+    `composition_first`, ADR-CP5).
+
+    Only `Task.value` changes, and only on the lanes other than the builder lane that hold a task
+    of `composition`: there a composition task is worth twice its value and every other task 0.
+    The order among the composition tasks is kept; the base policy's value/duration rule always
+    picks a ready composition task first (any positive ratio beats 0). A positive value would not
+    do for the simulated score of `rollout`: the discounted value of a task ending past the
+    horizon is 0, so a short research outside the composition would still go first next to a
+    long composition research. At value 0 it gains nothing by going first, and it is still planned
+    when the lane would otherwise stand idle (the idle term rewards a busy lane). The builder lane
+    is never changed. Engines hold no logic of their own for it.
+    """
+    chosen = frozenset(composition)
+    lanes = {task.lane for task in problem.tasks if task.data_id in chosen} - {BUILDER_LANE}
+    if not lanes:
+        return problem
+
+    def raised(task: Task) -> Task:
+        if task.lane not in lanes:
+            return task
+        value = task.value * COMPOSITION_FIRST_FACTOR if task.data_id in chosen else 0.0
+        return dataclasses.replace(task, value=value)
+
+    return dataclasses.replace(problem, tasks=tuple(raised(task) for task in problem.tasks))
