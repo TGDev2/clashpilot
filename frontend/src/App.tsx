@@ -17,6 +17,7 @@ import { Scenarios } from "./pages/Scenarios";
 import { Settings } from "./pages/Settings";
 import { Strategy } from "./pages/Strategy";
 import { TaskSheet } from "./pages/TaskSheet";
+import { TownHall } from "./pages/TownHall";
 import { VillageProvider } from "./state/village";
 
 /** Lets react-aria links navigate through the router instead of reloading the page. */
@@ -48,6 +49,7 @@ export function App() {
               <Route path="constructeurs" element={<Gantt />} />
               <Route path="taches/:taskId" element={<TaskSheet />} />
               <Route path="strategie" element={<Strategy />} />
+              <Route path="hdv" element={<TownHall />} />
               <Route path="ressources" element={<Resources />} />
               <Route path="scenarios" element={<Scenarios />} />
               <Route path="objets" element={<MagicItems />} />

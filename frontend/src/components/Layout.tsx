@@ -10,6 +10,7 @@ const LINKS = [
   { to: "/calendrier", label: fr.nav.calendar },
   { to: "/constructeurs", label: fr.nav.builders },
   { to: "/strategie", label: fr.nav.strategy },
+  { to: "/hdv", label: fr.nav.townHall },
   { to: "/ressources", label: fr.nav.resources },
   { to: "/scenarios", label: fr.nav.scenarios },
   { to: "/objets", label: fr.nav.items },

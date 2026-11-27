@@ -17,6 +17,7 @@ export const fr = {
     calendar: "Calendrier",
     builders: "Constructeurs",
     strategy: "Stratégie",
+    townHall: "Lancer l'HDV",
     resources: "Ressources",
     scenarios: "Scénarios",
     items: "Objets magiques",
@@ -73,6 +74,36 @@ export const fr = {
     sleepDelay: (duration: string) => `Le sommeil retarde cette date de ${duration}`,
     noTarget: "Aucun Hôtel de Ville à améliorer",
     labSkipped: "Le laboratoire n'est pas attendu",
+  },
+  townHall: {
+    title: "Quand lancer l'Hôtel de Ville ?",
+    intro:
+      "Comparez plusieurs moments de lancement : chaque option est un plan simulé et rien n'est enregistré. La décision vous revient.",
+    compare: "Comparer",
+    comparing: "Comparaison en cours…",
+    result: (level: number) => `Hôtel de Ville ${level} : les moments de lancement`,
+    kinds: {
+      after: "Après tout le reste",
+      no_wait: "Sans ouvrier inactif",
+      discount_edge: "À la fin de la réduction",
+    },
+    start: "Lancement :",
+    finish: "Fin :",
+    idle: "Ouvriers inactifs :",
+    unfinished: "Non fini à l'arrivée",
+    nothingUnfinished: "Aucune amélioration du niveau actuel.",
+    labLeft: (count: number, duration: string) =>
+      `${count} ${count === 1 ? "recherche" : "recherches"}, ${duration} de labo`,
+    laneLeft: (lane: string, count: number, duration: string) =>
+      `${lane} : ${count} ${count === 1 ? "amélioration" : "améliorations"}, ${duration}`,
+    compositionLeft: (count: number, duration: string) =>
+      count === 1
+        ? `1 recherche de ta compo non finie (${duration})`
+        : `${count} recherches de ta compo non finies (${duration})`,
+    gap: (signed: string) =>
+      `Écart avec « Après tout le reste », en éléments non finis : ${signed}`,
+    heroes: "Héros à l'arrivée",
+    hero: (name: string, level: number) => `${name} : niveau ${level}`,
   },
   forecast: {
     title: "Ressources",
