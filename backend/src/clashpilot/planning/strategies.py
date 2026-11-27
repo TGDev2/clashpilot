@@ -24,6 +24,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from clashpilot.planning.critical import current_level_ids
 from clashpilot.planning.model import Goal, Problem, Task
 from clashpilot.planning.objective import Objective
 
@@ -145,20 +146,15 @@ def _value(task: Task, strategy: Strategy, composition: frozenset[int]) -> float
     return task.value * factor
 
 
-def _town_hall_last(tasks: Sequence[Task]) -> tuple[Task, ...]:
-    """Each town hall upgrade requires every task that does not depend on a town hall."""
+def _town_hall_last(tasks: Sequence[Task], skip_lanes: Iterable[str] = ()) -> tuple[Task, ...]:
+    """Each town hall upgrade requires every task that does not depend on a town hall.
+
+    The tasks of `skip_lanes` are not waited for.
+    """
     town_halls = {task.id for task in tasks if TOWN_HALL_TAG in task.tags}
     if not town_halls:
         return tuple(tasks)
-    after = set(town_halls)
-    grown = True
-    while grown:
-        grown = False
-        for task in tasks:
-            if task.id not in after and after.intersection(task.requires):
-                after.add(task.id)
-                grown = True
-    current = tuple(task.id for task in tasks if task.id not in after)
+    current = current_level_ids(tasks, skip_lanes)
     return tuple(
         dataclasses.replace(task, requires=tuple(dict.fromkeys((*task.requires, *current))))
         if task.id in town_halls
