@@ -1384,6 +1384,11 @@ export interface components {
             assignments: components["schemas"]["AssignmentOut"][];
             /** Composition */
             composition?: number[];
+            /**
+             * Critical Path
+             * @default false
+             */
+            critical_path: boolean;
             /** Engine */
             engine: string;
             /** Excluded */
@@ -1428,6 +1433,11 @@ export interface components {
         PlanRequest: {
             /** Composition */
             composition?: number[];
+            /**
+             * Critical Path
+             * @default false
+             */
+            critical_path: boolean;
             /** Engine */
             engine?: string | null;
             goal?: components["schemas"]["GoalRef"] | null;

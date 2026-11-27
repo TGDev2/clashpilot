@@ -26,6 +26,20 @@ export type SchedulePreview = {
     : PreviewSchema[K];
 };
 
+type PlanRequest = components["schemas"]["PlanRequest"];
+/**
+ * A `POST .../plans` body. The server gives `critical_path` its default (false) when it is left
+ * out, although the generated type marks it required: openapi-typescript drops the `?` of any
+ * field with a default.
+ */
+export type PlanBody = Omit<PlanRequest, "critical_path"> &
+  Partial<Pick<PlanRequest, "critical_path">>;
+
+/** `body` as the typed client expects it; the fields left out take their server defaults. */
+export function planBody(body: PlanBody): PlanRequest {
+  return body as PlanRequest;
+}
+
 let client: ReturnType<typeof createClient<paths>> | undefined;
 
 /**

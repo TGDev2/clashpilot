@@ -15,6 +15,10 @@ whole journal, and the objective is the one of the latest `priority_changed`, if
 A plan may name a strategy (E16), with an army composition, a goal and war windows: they are part
 of the stored params, and `apply_strategy` turns the compiled problem and the objective into the
 strategy's at every computation. A `priority_changed` still wins over the strategy's weights.
+
+The `critical_path` option (E24, ADR-CP2), orthogonal to the strategy, raises the task values by
+their criticality after the strategy (`critical.prioritize_critical`); it is stored with the
+params, so a replanning, a scenario and a forecast apply it again. `input_hash` covers it.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ from typing import Any, Literal, Self
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import ManualState, VillageSnapshot
 from clashpilot.planning.compile import compile_problem, running_jobs
+from clashpilot.planning.critical import prioritize_critical
 from clashpilot.planning.explain import consumed_resources, explain_plan, reliability
 from clashpilot.planning.journal import JournalEntry, KnownJob, objective_of, replay
 from clashpilot.planning.model import Decision, Plan, Problem
@@ -100,10 +105,12 @@ class PlanParams:
     composition: tuple[int, ...] = ()
     goal: tuple[int, int] | None = None  # (data_id, level)
     war_windows: tuple[tuple[int, int], ...] = ()  # (start, end) UTC epochs
+    critical_path: bool = False
 
     @classmethod
     def from_json(cls, document: Mapping[str, Any]) -> Self:
-        """The params stored as JSON; a plan stored before E16 has no strategy."""
+        """The params stored as JSON; a plan stored before E16 has no strategy, before E24 no
+        `critical_path` (false)."""
         goal = document.get("goal")
         return cls(
             horizon_days=int(document["horizon_days"]),
@@ -115,6 +122,7 @@ class PlanParams:
             war_windows=tuple(
                 (int(start), int(end)) for start, end in document.get("war_windows", ())
             ),
+            critical_path=bool(document.get("critical_path", False)),
         )
 
 
@@ -142,6 +150,7 @@ def resolve_params(
     composition: Sequence[int] = (),
     goal: tuple[int, int] | None = None,
     war_windows: Sequence[tuple[int, int]] = (),
+    critical_path: bool = False,
 ) -> PlanParams:
     """The SPEC defaults: `auto` if registered else `rollout`, profile `fast`, 90 days.
 
@@ -161,6 +170,7 @@ def resolve_params(
         composition=tuple(composition),
         goal=goal,
         war_windows=tuple(sorted(war_windows)),
+        critical_path=critical_path,
     )
 
 
@@ -175,20 +185,25 @@ def strategy_objective(params: PlanParams) -> Objective:
 
 
 def with_strategy(problem: Problem, params: PlanParams) -> tuple[Problem, Objective]:
-    """The compiled problem and the objective as the plan's strategy sees them."""
+    """The compiled problem and the objective as the plan's strategy sees them, then with the
+    values raised by criticality when the plan asks for `critical_path`."""
     if params.strategy is None:
-        return problem, DEFAULT_OBJECTIVE
-    strategies = load_strategies()
-    if params.strategy not in strategies:
-        raise UnknownStrategyError(params.strategy)
-    goal = None if params.goal is None else goal_of(problem, *params.goal)
-    return apply_strategy(
-        problem,
-        strategies[params.strategy],
-        params.composition,
-        goal=goal,
-        war_windows=params.war_windows,
-    )
+        problem, objective = problem, DEFAULT_OBJECTIVE
+    else:
+        strategies = load_strategies()
+        if params.strategy not in strategies:
+            raise UnknownStrategyError(params.strategy)
+        goal = None if params.goal is None else goal_of(problem, *params.goal)
+        problem, objective = apply_strategy(
+            problem,
+            strategies[params.strategy],
+            params.composition,
+            goal=goal,
+            war_windows=params.war_windows,
+        )
+    if params.critical_path:
+        problem = prioritize_critical(problem)
+    return problem, objective
 
 
 def check_goal(pack: GamePack, params: PlanParams) -> None:
@@ -216,14 +231,26 @@ def canonical_json(value: Any) -> str:
     )
 
 
-def input_hash(problem: Problem, objective: Objective, engine: str, profile: str, seed: int) -> str:
-    document = {
+def input_hash(
+    problem: Problem,
+    objective: Objective,
+    engine: str,
+    profile: str,
+    seed: int,
+    *,
+    critical_path: bool = False,
+) -> str:
+    """The digest of the engine inputs; `critical_path` counts only when set, so the hashes of
+    the plans without it stay what they were."""
+    document: dict[str, Any] = {
         "problem": dataclasses.asdict(problem),
         "objective": dataclasses.asdict(objective),
         "engine": engine,
         "profile": profile,
         "seed": seed,
     }
+    if critical_path:
+        document["critical_path"] = True
     return hashlib.sha256(canonical_json(document).encode("utf-8")).hexdigest()
 
 
@@ -350,7 +377,14 @@ def describe(
         warnings.append(NO_FARM_RATE)
     warnings = list(dict.fromkeys(warnings))
     reproducible = params.profile == "repro" or params.engine in REPRODUCIBLE_ENGINES
-    digest = input_hash(problem, objective, params.engine, params.profile, config.seed)
+    digest = input_hash(
+        problem,
+        objective,
+        params.engine,
+        params.profile,
+        config.seed,
+        critical_path=params.critical_path,
+    )
     value = score(sim, objective, problem)
     pack = inputs.pack
     assert inputs.schedule_profile is not None  # compile_problem refuses a missing profile
@@ -388,6 +422,7 @@ def describe(
         if params.goal is None
         else {"data_id": params.goal[0], "level": params.goal[1]},
         "war_windows": [{"start": start, "end": end} for start, end in params.war_windows],
+        "critical_path": params.critical_path,
     }
     resources = {
         name: (typed.status, typed.as_of) for name, typed in inputs.manual.resources.items()

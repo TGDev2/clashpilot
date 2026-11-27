@@ -6,7 +6,8 @@ engine runs in the thread pool, never in the event loop. A plan is `stale` once 
 than the one it was computed on is imported; the event `snapshot_imported` replans on it.
 
 A plan may name a strategy of `GET /api/meta/strategies` with an army composition, a goal and war
-windows (E16): the plan carries them back, and every replanning applies them again.
+windows (E16): the plan carries them back, and every replanning applies them again. The same holds
+for `critical_path` (E24, false by default): the task values grow with their criticality.
 """
 
 from __future__ import annotations
@@ -76,6 +77,7 @@ class PlanRequest(BaseModel):
     composition: list[int] = Field(default_factory=list)
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
+    critical_path: bool = False
 
 
 class ProofOut(BaseModel):
@@ -133,6 +135,7 @@ class PlanOut(BaseModel):
     composition: list[int] = Field(default_factory=list)
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
+    critical_path: bool = False
 
 
 class Explained(BaseModel):
@@ -367,6 +370,7 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
             composition=payload.composition,
             goal=None if payload.goal is None else (payload.goal.data_id, payload.goal.level),
             war_windows=[(window.start, window.end) for window in payload.war_windows],
+            critical_path=payload.critical_path,
         )
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None

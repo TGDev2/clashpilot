@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from bisect import bisect_right
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from operator import itemgetter
 from typing import Literal
 
@@ -41,6 +41,7 @@ from clashpilot.planning.simulate import (
 
 MAX_CHAINS = 3
 CRITICAL_FLOAT_S = 300  # a task with at most this float is critical
+_DAY_S = 24 * 3600
 _MAX_STEPS = 10_000  # safety cap of the search of a valid start; each step moves forward
 
 Interval = tuple[int, int]
@@ -308,3 +309,39 @@ def critical_path(problem: Problem, skip_lanes: Iterable[str] = ()) -> CriticalP
         float_s=floats,
         chains=_chains(members, early),
     )
+
+
+def prioritize_critical(problem: Problem) -> Problem:
+    """The problem with each task's value raised by its criticality (plan option `critical_path`).
+
+    Only `Task.value` changes, and only for the tasks `critical_path(problem)` gives a float to.
+    With `r` the largest `value / max(1, duration_s)` of the problem, `T` the sum of the values
+    and `f` the float of a task in seconds:
+
+    - every task with a float is multiplied by `1 + DAY / (DAY + f)`: twice its value without
+      float, almost unchanged with weeks of float, so a smaller float always weighs more;
+    - a critical task (`f <= CRITICAL_FLOAT_S`) also gets `2 * r * max(1, duration_s) + T`.
+
+    Its ratio is then above `2 * r`, while a task with more float stays strictly below `2 * r`:
+    a task without float dominates every task with float under the value/duration rule of the
+    base policy. The `T` term makes each critical task worth more than all the other values
+    together, so the simulated score of `rollout` also prefers delaying anything else. Engines
+    hold no logic of their own for it. A problem without town hall task, or whose values are all
+    zero, comes back unchanged.
+    """
+    floats = critical_path(problem).float_s
+    total = sum(task.value for task in problem.tasks)
+    if not floats or total <= 0:
+        return problem
+    top_ratio = max(task.value / max(1, task.duration_s) for task in problem.tasks)
+
+    def raised(task: Task) -> Task:
+        slack = floats.get(task.id)
+        if slack is None:
+            return task
+        value = task.value * (1 + _DAY_S / (_DAY_S + slack))
+        if slack <= CRITICAL_FLOAT_S:
+            value += 2 * top_ratio * max(1, task.duration_s) + total
+        return replace(task, value=value)
+
+    return replace(problem, tasks=tuple(raised(task) for task in problem.tasks))

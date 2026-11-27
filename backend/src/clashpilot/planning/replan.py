@@ -195,7 +195,14 @@ def _keeps(
     remaining: Plan,
 ) -> bool:
     if event.type != TASK_STARTED:
-        digest = input_hash(problem, objective, params.engine, params.profile, seed)
+        digest = input_hash(
+            problem,
+            objective,
+            params.engine,
+            params.profile,
+            seed,
+            critical_path=params.critical_path,
+        )
         if digest != previous.input_hash:
             return False
     return simulate(problem, remaining).valid
