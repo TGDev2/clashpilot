@@ -18,6 +18,9 @@ export type JournalEntryOut = components["schemas"]["JournalEntryOut"];
 export type ActionOut = components["schemas"]["ActionOut"];
 export type ProofOut = components["schemas"]["ProofOut"];
 export type AssignmentOut = components["schemas"]["AssignmentOut"];
+export type CriticalPathOut = components["schemas"]["CriticalPathOut"];
+export type EstimateOut = components["schemas"]["Estimate"];
+export type CriticalAlertOut = RecommendationsOut["critical_alerts"][number];
 type PreviewSchema = components["schemas"]["SchedulePreview"];
 /** As the client hands it over: each window is a `[start, end]` pair of UTC epochs, typed loosely. */
 export type SchedulePreview = {

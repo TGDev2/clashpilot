@@ -77,6 +77,11 @@ export function formatDuration(seconds: number): string {
   return parts.join(" ");
 }
 
+/** A lane as the subject of a sentence ("les ouvriers"), the lane key itself when it has none. */
+export function laneSubject(lane: string): string {
+  return (fr.criticalPath.laneSubject as Record<string, string>)[lane] ?? lane;
+}
+
 /** The French name of a resource key, the key itself when it has none. */
 export function resourceLabel(key: string): string {
   return (fr.resources as Record<string, string>)[key] ?? key;

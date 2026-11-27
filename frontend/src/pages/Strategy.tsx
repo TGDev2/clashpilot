@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-aria-components";
-import { type ApiProblem, api, planBody, settle } from "../api/client";
+import { type ApiProblem, api, type PlanBody, planBody, settle } from "../api/client";
 import { useApi } from "../api/useApi";
-import { TextInput } from "../components/forms";
+import { CheckboxInput, TextInput } from "../components/forms";
 import { ProblemNotice } from "../components/ProblemNotice";
 import { Button, PageTitle, Section, TextAlert } from "../components/ui";
 import { fr } from "../i18n/fr";
@@ -29,6 +29,11 @@ export function Strategy() {
   const [composition, setComposition] = useState("");
   const [goalId, setGoalId] = useState("");
   const [goalLevel, setGoalLevel] = useState("");
+  const [criticalPath, setCriticalPath] = useState(false);
+  const [skipLab, setSkipLab] = useState(false);
+  const [compositionFirst, setCompositionFirst] = useState(false);
+  // The composition can only come first once it names at least one unit.
+  const hasUnits = (parseComposition(composition)?.length ?? 0) > 0;
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [localError, setLocalError] = useState<string | undefined>();
@@ -41,11 +46,8 @@ export function Strategy() {
     setDone(false);
     setProblem(undefined);
     setLocalError(undefined);
-    const body: {
-      strategy?: string;
-      composition?: number[];
-      goal?: { data_id: number; level: number };
-    } = {};
+    // An option left unchecked sends no key: the server's default applies.
+    const body: PlanBody = {};
     if (chosen !== undefined) {
       body.strategy = chosen;
     }
@@ -65,6 +67,15 @@ export function Strategy() {
         return;
       }
       body.goal = { data_id: dataId, level };
+    }
+    if (criticalPath) {
+      body.critical_path = true;
+    }
+    if (skipLab) {
+      body.town_hall_skip_lanes = ["lab"];
+    }
+    if (compositionFirst && hasUnits) {
+      body.composition_first = true;
     }
     setBusy(true);
     const outcome = await settle(() =>
@@ -122,6 +133,13 @@ export function Strategy() {
             value={composition}
             onChange={setComposition}
           />
+          <CheckboxInput
+            label={fr.strategy.compositionFirst}
+            checked={compositionFirst && hasUnits}
+            onChange={setCompositionFirst}
+            disabled={!hasUnits}
+            hint={hasUnits ? undefined : fr.strategy.compositionFirstHint}
+          />
           {chosen === CUSTOM_GOAL && (
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput
@@ -140,6 +158,14 @@ export function Strategy() {
               />
             </div>
           )}
+        </Section>
+        <Section title={fr.strategy.townHallTitle}>
+          <CheckboxInput
+            label={fr.strategy.criticalPath}
+            checked={criticalPath}
+            onChange={setCriticalPath}
+          />
+          <CheckboxInput label={fr.strategy.skipLab} checked={skipLab} onChange={setSkipLab} />
         </Section>
         <div className="space-y-3">
           <Button onPress={() => void compute()} isDisabled={busy || villageId === null}>

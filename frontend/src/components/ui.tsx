@@ -75,6 +75,25 @@ export function TextAlert({ children }: { children: ReactNode }) {
   );
 }
 
+const TAG_TONES = {
+  // Solid: the one mark that must be seen first.
+  critical: "border-signal bg-signal text-ink",
+  gain: "border-confirmed/60 text-confirmed",
+  own: "border-signal/60 text-signal",
+  quiet: "border-line text-mist",
+};
+
+/** A short mark next to a name or a value: critical work, slack, own unit. */
+export function Tag({ tone, children }: { tone: keyof typeof TAG_TONES; children: ReactNode }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium tracking-wide ${TAG_TONES[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function Banner({ children }: { children: ReactNode }) {
   return (
     <div
