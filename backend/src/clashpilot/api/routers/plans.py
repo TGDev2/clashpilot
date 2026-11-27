@@ -6,12 +6,20 @@ engine runs in the thread pool, never in the event loop. A plan is `stale` once 
 than the one it was computed on is imported; the event `snapshot_imported` replans on it.
 
 A plan may name a strategy of `GET /api/meta/strategies` with an army composition, a goal and war
-windows (E16): the plan carries them back, and every replanning applies them again.
+windows (E16): the plan carries them back, and every replanning applies them again. The same holds
+for `critical_path` (E24, false by default): the task values grow with their criticality, and
+for the options of E29: `town_hall_skip_lanes` (empty by default; a lane the compiled problem does
+not know is a 422 `unknown_lane`) and `composition_first` (false by default).
+
+The recommendations also say how critical each start is, and which critical chains or lanes stand
+idle (E25): the latest plan is compiled again at its own `now`, with its strategy, for
+`critical_path`; running jobs and delays are read at the application clock.
 """
 
 from __future__ import annotations
 
 import sqlite3
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -22,15 +30,28 @@ from starlette.concurrency import run_in_threadpool
 
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.gamedata import ErrorBody
+from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import Resource
 from clashpilot.planning.compile import MissingInputError
+from clashpilot.planning.critical import (
+    ChainStopped,
+    CriticalPath,
+    LaneStopped,
+    StartFigures,
+    critical_path,
+    start_figures,
+    stopped_work,
+)
 from clashpilot.planning.messages import WAIT_NAME, entry
+from clashpilot.planning.model import Assignment, Problem
 from clashpilot.planning.replan import Event, PreviousPlan, ReplanError, replan
+from clashpilot.planning.scenarios import compiled
 from clashpilot.planning.service import (
     InvalidGoalError,
     InvalidPlanError,
     PlanInputs,
     UnknownEngineError,
+    UnknownLaneError,
     UnknownStrategyError,
     create_plan,
     resolve_params,
@@ -76,6 +97,9 @@ class PlanRequest(BaseModel):
     composition: list[int] = Field(default_factory=list)
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
+    critical_path: bool = False
+    town_hall_skip_lanes: list[str] = Field(default_factory=list)
+    composition_first: bool = False
 
 
 class ProofOut(BaseModel):
@@ -133,6 +157,9 @@ class PlanOut(BaseModel):
     composition: list[int] = Field(default_factory=list)
     goal: GoalRef | None = None
     war_windows: list[WarWindow] = Field(default_factory=list)
+    critical_path: bool = False
+    town_hall_skip_lanes: list[str] = Field(default_factory=list)
+    composition_first: bool = False
 
 
 class Explained(BaseModel):
@@ -171,6 +198,38 @@ class ActionOut(BaseModel):
     drawbacks: list[Explained]
     reliability: Reliability
     counterfactual: Counterfactual | None
+    # Start actions only, null for a wait. `float_s` stays null without a town hall target and for
+    # a task beyond the current level; `critical` is a float of 300 s at most; `date_gain_s` is the
+    # duration a critical start saves thanks to the modifiers active when it starts.
+    float_s: int | None = None
+    critical: bool | None = None
+    date_gain_s: int | None = None
+
+
+class ChainStoppedOut(BaseModel):
+    """Nothing of a critical chain runs and its next upgrade, ready, starts more than 15 minutes
+    from now; `planned_start` and `delay_s` are null when the plan does not hold it.
+    """
+
+    code: Literal["chain_stopped"]
+    task_id: str
+    name: str
+    planned_start: int | None
+    delay_s: int | None
+
+
+class LaneStoppedOut(BaseModel):
+    """Nothing runs on a critical lane and its next upgrade starts more than 15 minutes from now;
+    `planned_start` and `delay_s` are null when the plan starts none although one is ready.
+    """
+
+    code: Literal["lane_stopped"]
+    lane: str
+    planned_start: int | None
+    delay_s: int | None
+
+
+CriticalAlertOut = Annotated[ChainStoppedOut | LaneStoppedOut, Field(discriminator="code")]
 
 
 class RecommendationsOut(BaseModel):
@@ -190,6 +249,7 @@ class RecommendationsOut(BaseModel):
     pack: PackRef
     proof: ProofOut
     actions: list[ActionOut]
+    critical_alerts: list[CriticalAlertOut]
 
 
 def _data_dir(request: Request) -> Path:
@@ -367,6 +427,9 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
             composition=payload.composition,
             goal=None if payload.goal is None else (payload.goal.data_id, payload.goal.level),
             war_windows=[(window.start, window.end) for window in payload.war_windows],
+            critical_path=payload.critical_path,
+            town_hall_skip_lanes=payload.town_hall_skip_lanes,
+            composition_first=payload.composition_first,
         )
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
@@ -397,6 +460,8 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
         raise _unknown_strategy(error) from None
     except MissingInputError as error:
         raise _missing_input(error) from None
+    except UnknownLaneError as error:
+        raise ApiError(422, "unknown_lane", f"File inconnue : {', '.join(error.lanes)}.") from None
     except InvalidPlanError as error:
         raise _invalid_plan(error) from None
     with open_db(_data_dir(request)) as connection:
@@ -413,8 +478,8 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
         409: {"model": ErrorBody, "description": "Code missing_input or no_active_pack."},
         422: {
             "model": ErrorBody,
-            "description": "Code unknown_engine, unknown_strategy, invalid_goal or "
-            "invalid_request.",
+            "description": "Code unknown_engine, unknown_strategy, invalid_goal, unknown_lane "
+            "or invalid_request.",
         },
         500: {"model": ErrorBody, "description": "The engine plan is invalid (invalid_plan)."},
     },
@@ -449,6 +514,60 @@ def get_latest_plan(request: Request, village_id: str) -> PlanOut:
     return PlanOut.model_validate({**stored.body, "stale": stale})
 
 
+def _criticality(
+    request: Request, village_id: str, stored: store.StoredPlan
+) -> tuple[GamePack, Problem, CriticalPath] | None:
+    """The problem of the latest plan at its `now` and its critical path, with the active pack.
+
+    None when the inputs changed since the plan no longer compile: the recommendations stay those
+    of the plan, without any criticality.
+    """
+    with open_db(_data_dir(request)) as connection:
+        found = store.latest_snapshot_row(connection, village_id)
+        pack = store.active_pack(connection)
+        if found is None or pack is None:
+            return None
+        snapshot_id, snapshot = found
+        inputs = PlanInputs(
+            snapshot=snapshot,
+            manual=store.manual_state(connection, village_id),
+            pack=pack,
+            schedule_profile=store.schedule_profile(connection, village_id),
+            journal=journal_store.entries(connection, village_id),
+        )
+    try:
+        problem, _ = compiled(inputs, stored.params, stored.body, stored.snapshot_id == snapshot_id)
+    except (MissingInputError, UnknownStrategyError):
+        return None
+    return pack, problem, critical_path(problem)
+
+
+def _alerts(
+    pack: GamePack,
+    problem: Problem,
+    path: CriticalPath,
+    rows: list[dict[str, Any]],
+    now: int,
+) -> list[dict[str, Any]]:
+    """The critical work idle at `now` under the plan assignments `rows`."""
+    assignments = tuple(
+        Assignment(row["task_id"], row["lane"], row["lane_slot"], row["start"], row["end"])
+        for row in rows
+    )
+    alerts: list[dict[str, Any]] = []
+    for stopped in stopped_work(problem, path, assignments, now):
+        when = {"planned_start": stopped.planned_start, "delay_s": stopped.delay_s}
+        if isinstance(stopped, ChainStopped):
+            item = pack.item(stopped.task.data_id)
+            name = item.name if item is not None else str(stopped.task.data_id)
+            alerts.append(
+                {"code": "chain_stopped", "task_id": stopped.task.id, "name": name, **when}
+            )
+        elif isinstance(stopped, LaneStopped):
+            alerts.append({"code": "lane_stopped", "lane": stopped.lane, **when})
+    return alerts
+
+
 @router.get(
     "/{village_id}/recommendations/now",
     response_model=RecommendationsOut,
@@ -459,10 +578,12 @@ def get_recommendations(request: Request, village_id: str) -> RecommendationsOut
 
     `next_login_at` is the earliest planned start not before now; every planned assignment
     starting then is a `start` action. If it is later than now, a `wait` action comes first.
+    `critical_alerts` names the critical chains and lanes standing idle now.
     """
     stored = _latest(request, village_id)
     now: int = request.app.state.clock()
     body = stored.body
+    criticality = _criticality(request, village_id, stored)
     planned = [a for a in body["assignments"] if a["status"] == "planned" and a["start"] >= now]
     next_login = min((a["start"] for a in planned), default=None)
     actions: list[dict[str, Any]] = []
@@ -484,6 +605,10 @@ def get_recommendations(request: Request, village_id: str) -> RecommendationsOut
         if assignment["start"] != next_login:
             continue
         explained = stored.explanations[assignment["task_id"]]
+        figures = StartFigures(None, False, 0)
+        if criticality is not None:
+            _, problem, path = criticality
+            figures = start_figures(problem, path, assignment["task_id"], assignment["start"])
         actions.append(
             {
                 "task_id": assignment["task_id"],
@@ -495,8 +620,12 @@ def get_recommendations(request: Request, village_id: str) -> RecommendationsOut
                 "lane_slot": assignment["lane_slot"],
                 **explained,
                 "reliability": stored.reliability,
+                **asdict(figures),
             }
         )
+    alerts: list[dict[str, Any]] = []
+    if criticality is not None:
+        alerts = _alerts(*criticality, body["assignments"], now)
     return RecommendationsOut.model_validate(
         {
             "plan_id": stored.plan_id,
@@ -507,6 +636,7 @@ def get_recommendations(request: Request, village_id: str) -> RecommendationsOut
             "pack": body["pack"],
             "proof": body["proof"],
             "actions": actions,
+            "critical_alerts": alerts,
         }
     )
 

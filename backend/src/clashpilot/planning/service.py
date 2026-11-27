@@ -15,6 +15,15 @@ whole journal, and the objective is the one of the latest `priority_changed`, if
 A plan may name a strategy (E16), with an army composition, a goal and war windows: they are part
 of the stored params, and `apply_strategy` turns the compiled problem and the objective into the
 strategy's at every computation. A `priority_changed` still wins over the strategy's weights.
+
+The `critical_path` option (E24, ADR-CP2), orthogonal to the strategy, raises the task values by
+their criticality after the strategy (`critical.prioritize_critical`); it is stored with the
+params, so a replanning, a scenario and a forecast apply it again. `input_hash` covers it.
+
+Two more options of ADR-CP5 (E29) work the same way: `town_hall_skip_lanes` (the town hall of
+`town_hall_last` does not wait for those lanes, and `critical_path` gives their tasks no float) and
+`composition_first` (`strategies.prioritize_composition`, applied after the criticality, so the
+composition order wins on its lanes while the other lanes keep their criticality).
 """
 
 from __future__ import annotations
@@ -29,13 +38,19 @@ from typing import Any, Literal, Self
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import ManualState, VillageSnapshot
 from clashpilot.planning.compile import compile_problem, running_jobs
+from clashpilot.planning.critical import prioritize_critical, unknown_lanes
 from clashpilot.planning.explain import consumed_resources, explain_plan, reliability
 from clashpilot.planning.journal import JournalEntry, KnownJob, objective_of, replay
 from clashpilot.planning.model import Decision, Plan, Problem
 from clashpilot.planning.objective import Objective, score
 from clashpilot.planning.registry import PLANNERS, Planner, PlannerConfig
 from clashpilot.planning.simulate import SimResult, Violation, simulate
-from clashpilot.planning.strategies import apply_strategy, goal_of, load_strategies
+from clashpilot.planning.strategies import (
+    apply_strategy,
+    goal_of,
+    load_strategies,
+    prioritize_composition,
+)
 from clashpilot.schedule.profile import ScheduleProfile
 
 Profile = Literal["fast", "repro"]
@@ -70,6 +85,14 @@ class InvalidGoalError(ValueError):
         self.level = level
 
 
+class UnknownLaneError(ValueError):
+    """`town_hall_skip_lanes` names lanes the compiled problem does not know."""
+
+    def __init__(self, lanes: Sequence[str]) -> None:
+        super().__init__(f"unknown lanes: {', '.join(lanes)}")
+        self.lanes = tuple(lanes)
+
+
 class InvalidPlanError(RuntimeError):
     """The engine returned a plan the simulator refuses: it is never stored nor answered."""
 
@@ -100,10 +123,15 @@ class PlanParams:
     composition: tuple[int, ...] = ()
     goal: tuple[int, int] | None = None  # (data_id, level)
     war_windows: tuple[tuple[int, int], ...] = ()  # (start, end) UTC epochs
+    critical_path: bool = False
+    town_hall_skip_lanes: tuple[str, ...] = ()
+    composition_first: bool = False
 
     @classmethod
     def from_json(cls, document: Mapping[str, Any]) -> Self:
-        """The params stored as JSON; a plan stored before E16 has no strategy."""
+        """The params stored as JSON; a plan stored before E16 has no strategy, before E24 no
+        `critical_path` (false), before E29 no `town_hall_skip_lanes` (empty) nor
+        `composition_first` (false)."""
         goal = document.get("goal")
         return cls(
             horizon_days=int(document["horizon_days"]),
@@ -115,6 +143,11 @@ class PlanParams:
             war_windows=tuple(
                 (int(start), int(end)) for start, end in document.get("war_windows", ())
             ),
+            critical_path=bool(document.get("critical_path", False)),
+            town_hall_skip_lanes=tuple(
+                str(lane) for lane in document.get("town_hall_skip_lanes", ())
+            ),
+            composition_first=bool(document.get("composition_first", False)),
         )
 
 
@@ -142,6 +175,9 @@ def resolve_params(
     composition: Sequence[int] = (),
     goal: tuple[int, int] | None = None,
     war_windows: Sequence[tuple[int, int]] = (),
+    critical_path: bool = False,
+    town_hall_skip_lanes: Sequence[str] = (),
+    composition_first: bool = False,
 ) -> PlanParams:
     """The SPEC defaults: `auto` if registered else `rollout`, profile `fast`, 90 days.
 
@@ -161,6 +197,9 @@ def resolve_params(
         composition=tuple(composition),
         goal=goal,
         war_windows=tuple(sorted(war_windows)),
+        critical_path=critical_path,
+        town_hall_skip_lanes=tuple(dict.fromkeys(town_hall_skip_lanes)),
+        composition_first=composition_first,
     )
 
 
@@ -175,20 +214,36 @@ def strategy_objective(params: PlanParams) -> Objective:
 
 
 def with_strategy(problem: Problem, params: PlanParams) -> tuple[Problem, Objective]:
-    """The compiled problem and the objective as the plan's strategy sees them."""
+    """The compiled problem and the objective as the plan's strategy sees them, then with the
+    values raised by criticality when the plan asks for `critical_path`, then with the composition
+    first when it asks for `composition_first`."""
     if params.strategy is None:
-        return problem, DEFAULT_OBJECTIVE
-    strategies = load_strategies()
-    if params.strategy not in strategies:
-        raise UnknownStrategyError(params.strategy)
-    goal = None if params.goal is None else goal_of(problem, *params.goal)
-    return apply_strategy(
-        problem,
-        strategies[params.strategy],
-        params.composition,
-        goal=goal,
-        war_windows=params.war_windows,
-    )
+        problem, objective = problem, DEFAULT_OBJECTIVE
+    else:
+        strategies = load_strategies()
+        if params.strategy not in strategies:
+            raise UnknownStrategyError(params.strategy)
+        goal = None if params.goal is None else goal_of(problem, *params.goal)
+        problem, objective = apply_strategy(
+            problem,
+            strategies[params.strategy],
+            params.composition,
+            goal=goal,
+            war_windows=params.war_windows,
+            town_hall_skip_lanes=params.town_hall_skip_lanes,
+        )
+    if params.critical_path:
+        problem = prioritize_critical(problem, params.town_hall_skip_lanes)
+    if params.composition_first:
+        problem = prioritize_composition(problem, params.composition)
+    return problem, objective
+
+
+def check_lanes(problem: Problem, params: PlanParams) -> None:
+    """Raise `UnknownLaneError` when `town_hall_skip_lanes` names a lane the problem lacks."""
+    unknown = unknown_lanes(problem, params.town_hall_skip_lanes)
+    if unknown:
+        raise UnknownLaneError(unknown)
 
 
 def check_goal(pack: GamePack, params: PlanParams) -> None:
@@ -216,15 +271,42 @@ def canonical_json(value: Any) -> str:
     )
 
 
-def input_hash(problem: Problem, objective: Objective, engine: str, profile: str, seed: int) -> str:
-    document = {
+def input_hash(
+    problem: Problem,
+    objective: Objective,
+    engine: str,
+    profile: str,
+    seed: int,
+    *,
+    critical_path: bool = False,
+    town_hall_skip_lanes: Sequence[str] = (),
+    composition_first: bool = False,
+) -> str:
+    """The digest of the engine inputs; each plan option counts only when set, so the hashes of
+    the plans without it stay what they were."""
+    document: dict[str, Any] = {
         "problem": dataclasses.asdict(problem),
         "objective": dataclasses.asdict(objective),
         "engine": engine,
         "profile": profile,
         "seed": seed,
     }
+    if critical_path:
+        document["critical_path"] = True
+    if town_hall_skip_lanes:
+        document["town_hall_skip_lanes"] = sorted(town_hall_skip_lanes)
+    if composition_first:
+        document["composition_first"] = True
     return hashlib.sha256(canonical_json(document).encode("utf-8")).hexdigest()
+
+
+def hash_options(params: PlanParams) -> dict[str, Any]:
+    """The plan options `input_hash` covers, read from `params`."""
+    return {
+        "critical_path": params.critical_path,
+        "town_hall_skip_lanes": params.town_hall_skip_lanes,
+        "composition_first": params.composition_first,
+    }
 
 
 def trace_json(trace: tuple[Decision, ...]) -> list[dict[str, Any]]:
@@ -312,10 +394,11 @@ def create_plan(
     """Compile, solve, judge and describe a plan.
 
     Raises `InvalidGoalError`, `UnknownStrategyError`, `MissingInputError` (from
-    `compile_problem`) and `InvalidPlanError`.
+    `compile_problem`), `UnknownLaneError` and `InvalidPlanError`.
     """
     check_goal(inputs.pack, params)
     compiled, _ = compile_inputs(inputs, now, params.horizon_days)
+    check_lanes(compiled, params)
     problem, weights = with_strategy(compiled, params)
     objective = objective_of(inputs.journal) or weights
     config = planner_config(overrides, params.profile)
@@ -350,7 +433,14 @@ def describe(
         warnings.append(NO_FARM_RATE)
     warnings = list(dict.fromkeys(warnings))
     reproducible = params.profile == "repro" or params.engine in REPRODUCIBLE_ENGINES
-    digest = input_hash(problem, objective, params.engine, params.profile, config.seed)
+    digest = input_hash(
+        problem,
+        objective,
+        params.engine,
+        params.profile,
+        config.seed,
+        **hash_options(params),
+    )
     value = score(sim, objective, problem)
     pack = inputs.pack
     assert inputs.schedule_profile is not None  # compile_problem refuses a missing profile
@@ -388,6 +478,9 @@ def describe(
         if params.goal is None
         else {"data_id": params.goal[0], "level": params.goal[1]},
         "war_windows": [{"start": start, "end": end} for start, end in params.war_windows],
+        "critical_path": params.critical_path,
+        "town_hall_skip_lanes": list(params.town_hall_skip_lanes),
+        "composition_first": params.composition_first,
     }
     resources = {
         name: (typed.status, typed.as_of) for name, typed in inputs.manual.resources.items()

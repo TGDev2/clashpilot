@@ -8,7 +8,8 @@ import { Button, Section, TextAlert } from "../../components/ui";
 import { fr } from "../../i18n/fr";
 
 type Overlay = components["schemas"]["ScenarioRequest"]["overlays"][number];
-type Kind = Overlay["type"];
+/** The overlays this form builds: those with a label (`start_at` is the town hall comparator's). */
+type Kind = keyof typeof fr.scenarios.overlays;
 type Mode = components["schemas"]["PolicyIn"]["mode"];
 
 const KINDS = Object.keys(fr.scenarios.overlays) as Kind[];

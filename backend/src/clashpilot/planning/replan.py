@@ -64,6 +64,7 @@ from clashpilot.planning.service import (
     compile_inputs,
     describe,
     engine,
+    hash_options,
     input_hash,
     planner_config,
     strategy_objective,
@@ -195,7 +196,14 @@ def _keeps(
     remaining: Plan,
 ) -> bool:
     if event.type != TASK_STARTED:
-        digest = input_hash(problem, objective, params.engine, params.profile, seed)
+        digest = input_hash(
+            problem,
+            objective,
+            params.engine,
+            params.profile,
+            seed,
+            **hash_options(params),
+        )
         if digest != previous.input_hash:
             return False
     return simulate(problem, remaining).valid

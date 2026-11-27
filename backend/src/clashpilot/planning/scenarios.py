@@ -14,8 +14,9 @@ Overlays, as validated mappings with a `type`:
   under the policy `strict` they are also sleep, so that no end falls in them.
 - `reserve_builder {count, until}`: `count` builder slots are taken by reservation jobs (frozen
   jobs named `reserved:...`, never shown) from when their running job ends until `until`.
-- `start_now {task_id}` and `use_item {item, task_id, at}`: the task is fixed without the engine,
-  at the earliest start the simulator accepts (from `now`, or from `at`), as a virtual frozen job;
+- `start_now {task_id}`, `start_at {task_id, at}` and `use_item {item, task_id, at}`: the task is
+  fixed without the engine, at the earliest start the simulator accepts (from `now`, or from
+  `at`), as a virtual frozen job;
   its cost is taken off the initial stock so that the engine places the rest around it. A book
   ends its job at once, a potion shortens the jobs of its lane running at its instant (SPEC 5), a
   rune fills its resource up to the cap (now only).
@@ -292,13 +293,14 @@ def _running(problem: Problem, task_id: str | None, at: int) -> FrozenJob | None
     )
 
 
-def _start_now(problem: Problem, task_id: str, forced: list[Task]) -> Problem:
+def _start_from(problem: Problem, task_id: str, after: int, forced: list[Task]) -> Problem:
+    """`task_id` fixed at its earliest start at or after `after` (`start_now`, `start_at`)."""
     task = _task(problem, task_id)
     if task is None:
         found = any(job.task_id == task_id for job in _real_jobs(problem))
         code = "already_started" if found else "task_not_found"
         raise InfeasibleError(reason(code, task=task_id))
-    assignment = earliest_start(problem, task, problem.now)
+    assignment = earliest_start(problem, task, after)
     forced.append(task)
     return _fix(problem, task, assignment, assignment.end)
 
@@ -367,7 +369,8 @@ def _use_item(
 def apply_overlays(
     problem: Problem, pack: GamePack, overlays: Sequence[Mapping[str, Any]]
 ) -> tuple[Problem, tuple[Task, ...]]:
-    """The problem with every overlay applied, and the tasks fixed by start_now or use_item.
+    """The problem with every overlay applied, and the tasks fixed by start_now, start_at or
+    use_item.
 
     Order: login policy, absences, builder reservations, then the fixed tasks as given.
     Raises `InfeasibleError`.
@@ -380,7 +383,9 @@ def apply_overlays(
     forced: list[Task] = []
     for overlay in overlays:
         if overlay["type"] == "start_now":
-            problem = _start_now(problem, str(overlay["task_id"]), forced)
+            problem = _start_from(problem, str(overlay["task_id"]), problem.now, forced)
+        elif overlay["type"] == "start_at":
+            problem = _start_from(problem, str(overlay["task_id"]), int(overlay["at"]), forced)
         elif overlay["type"] == "use_item":
             problem = _use_item(problem, pack, overlay, forced)
     return problem, tuple(forced)

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-aria-components";
-import { type ApiProblem, api, settle } from "../api/client";
+import { type ApiProblem, api, planBody, settle } from "../api/client";
 import { useApi } from "../api/useApi";
 import { TextInput } from "../components/forms";
 import { ProblemNotice } from "../components/ProblemNotice";
@@ -70,7 +70,7 @@ export function Strategy() {
     const outcome = await settle(() =>
       api().POST("/api/villages/{village_id}/plans", {
         params: { path: { village_id: villageId } },
-        body,
+        body: planBody(body),
       }),
     );
     setBusy(false);

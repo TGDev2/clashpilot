@@ -147,6 +147,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/critical-path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Critical Path
+         * @description The chains and lanes that fix the date of the next town hall, and the float of each task.
+         *
+         *     `skip_lanes` (repeatable) names the lanes the town hall does not wait for.
+         */
+        get: operations["get_critical_path_api_villages__village_id__critical_path_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/villages/{village_id}/diff": {
         parameters: {
             query?: never;
@@ -375,6 +397,7 @@ export interface paths {
          *
          *     `next_login_at` is the earliest planned start not before now; every planned assignment
          *     starting then is a `start` action. If it is later than now, a `wait` action comes first.
+         *     `critical_alerts` names the critical chains and lanes standing idle now.
          */
         get: operations["get_recommendations_api_villages__village_id__recommendations_now_get"];
         put?: never;
@@ -552,6 +575,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/villages/{village_id}/town-hall/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Town Hall Compare
+         * @description Compare launching the next town hall after the current level, as soon as a builder stays
+         *     free, or at the end of a builder reduction; simulated on the latest plan's inputs.
+         */
+        post: operations["post_town_hall_compare_api_villages__village_id__town_hall_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -598,10 +642,16 @@ export interface components {
             /** At */
             at: number;
             counterfactual: components["schemas"]["Counterfactual"] | null;
+            /** Critical */
+            critical?: boolean | null;
+            /** Date Gain S */
+            date_gain_s?: number | null;
             /** Drawbacks */
             drawbacks: components["schemas"]["Explained"][];
             /** End */
             end?: number | null;
+            /** Float S */
+            float_s?: number | null;
             /** Lane */
             lane?: string | null;
             /** Lane Slot */
@@ -646,6 +696,26 @@ export interface components {
             /** Tasks */
             tasks: string[];
         };
+        /**
+         * ChainStoppedOut
+         * @description Nothing of a critical chain runs and its next upgrade, ready, starts more than 15 minutes
+         *     from now; `planned_start` and `delay_s` are null when the plan does not hold it.
+         */
+        ChainStoppedOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "chain_stopped";
+            /** Delay S */
+            delay_s: number | null;
+            /** Name */
+            name: string;
+            /** Planned Start */
+            planned_start: number | null;
+            /** Task Id */
+            task_id: string;
+        };
         /** ChangeOut */
         ChangeOut: {
             after: components["schemas"]["PlacementOut"] | null;
@@ -683,6 +753,16 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "unsupported" | "unavailable";
+        };
+        /**
+         * CompositionLeftOut
+         * @description The current-level tasks of the plan's composition not finished, and their work left.
+         */
+        CompositionLeftOut: {
+            /** Count */
+            count: number;
+            /** Work S */
+            work_s: number;
         };
         /** ConflictOut */
         ConflictOut: {
@@ -736,6 +816,92 @@ export interface components {
             finish_delta_s: number;
             /** Score Delta */
             score_delta: number;
+        };
+        /**
+         * CriticalBoundOut
+         * @description What fixes the date: a chain of upgrades, or the work of `lane`.
+         */
+        CriticalBoundOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "chain" | "work";
+            /** Lane */
+            lane: string | null;
+        };
+        /**
+         * CriticalChainOut
+         * @description A longest path, ending with the upgrades of `data_id` from `from_level` to `to_level`.
+         */
+        CriticalChainOut: {
+            /** Data Id */
+            data_id: number;
+            finish: components["schemas"]["Estimate"];
+            /** From Level */
+            from_level: number;
+            /** Name */
+            name: string;
+            /** Task Ids */
+            task_ids: string[];
+            /** To Level */
+            to_level: number;
+        };
+        /**
+         * CriticalPathOut
+         * @description `finish_after`: the town hall started once the set is done; `finish_parallel`: run next to
+         *     it. `calendar_wait_s` is the time the first chain waits for the schedule, null without chain.
+         */
+        CriticalPathOut: {
+            bound: components["schemas"]["CriticalBoundOut"] | null;
+            /** Calendar Wait S */
+            calendar_wait_s: number | null;
+            /** Chains */
+            chains: components["schemas"]["CriticalChainOut"][];
+            /** Critical Lanes */
+            critical_lanes: string[];
+            finish_after: components["schemas"]["Estimate"];
+            finish_parallel: components["schemas"]["Estimate"];
+            set_finish: components["schemas"]["Estimate"];
+            /** Skip Lanes */
+            skip_lanes: string[];
+            target: components["schemas"]["CriticalTargetOut"] | null;
+            /** Tasks */
+            tasks: components["schemas"]["CriticalTaskOut"][];
+            /** Work Finish */
+            work_finish: components["schemas"]["LaneWorkOut"][];
+        };
+        /**
+         * CriticalTargetOut
+         * @description The next town hall upgrade.
+         */
+        CriticalTargetOut: {
+            /** Data Id */
+            data_id: number;
+            /** Name */
+            name: string;
+            /** Task Id */
+            task_id: string;
+            /** To Level */
+            to_level: number;
+        };
+        /**
+         * CriticalTaskOut
+         * @description `float_s`: how long the task may slip without moving the date.
+         */
+        CriticalTaskOut: {
+            /** Critical */
+            critical: boolean;
+            /** Float S */
+            float_s: number;
+            /** Lane */
+            lane: string;
+            /** Name */
+            name: string;
+            /** Task Id */
+            task_id: string;
+            /** To Level */
+            to_level: number;
         };
         /** DeclaredRate */
         DeclaredRate: {
@@ -992,6 +1158,15 @@ export interface components {
              */
             status: "ok" | "unsupported";
         };
+        /** HeroLevelOut */
+        HeroLevelOut: {
+            /** Data Id */
+            data_id: number;
+            /** Level Reached */
+            level_reached: number;
+            /** Name */
+            name: string;
+        };
         /**
          * ItemCompareRequest
          * @description `item` is a rule key of the active pack; `candidate_tasks` the tasks it may act on.
@@ -1076,6 +1251,79 @@ export interface components {
             task_id: string | null;
             /** Type */
             type: string;
+        };
+        /**
+         * LaneStoppedOut
+         * @description Nothing runs on a critical lane and its next upgrade starts more than 15 minutes from now;
+         *     `planned_start` and `delay_s` are null when the plan starts none although one is ready.
+         */
+        LaneStoppedOut: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            code: "lane_stopped";
+            /** Delay S */
+            delay_s: number | null;
+            /** Lane */
+            lane: string;
+            /** Planned Start */
+            planned_start: number | null;
+        };
+        /**
+         * LaneWorkOut
+         * @description The remaining work of a lane and the earliest date its capacity allows.
+         */
+        LaneWorkOut: {
+            /** Capacity */
+            capacity: number;
+            finish: components["schemas"]["Estimate"];
+            /** Lane */
+            lane: string;
+            /** Work S */
+            work_s: number;
+        };
+        /**
+         * LaunchOptionOut
+         * @description One moment to launch the town hall; the figures are read at its end (`th_finish`).
+         *
+         *     An `infeasible` option carries its reasons and no dates nor figures.
+         */
+        LaunchOptionOut: {
+            /** Engine */
+            engine: string;
+            /** Heroes */
+            heroes: components["schemas"]["HeroLevelOut"][];
+            /** Idle Builder S */
+            idle_builder_s: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "after" | "no_wait" | "discount_edge";
+            proof: components["schemas"]["ProofOut"] | null;
+            /** Reasons */
+            reasons: components["schemas"]["ReasonOut"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "infeasible";
+            /** Th Finish */
+            th_finish: number | null;
+            /** Th Start */
+            th_start: number | null;
+            /** Unfinished By Lane */
+            unfinished_by_lane: {
+                [key: string]: number;
+            };
+            unfinished_composition: components["schemas"]["CompositionLeftOut"] | null;
+            /** Unfinished Count */
+            unfinished_count: number | null;
+            /** Unfinished Work S By Lane */
+            unfinished_work_s_by_lane: {
+                [key: string]: number;
+            };
         };
         /** LevelOut */
         LevelOut: {
@@ -1263,6 +1511,16 @@ export interface components {
             assignments: components["schemas"]["AssignmentOut"][];
             /** Composition */
             composition?: number[];
+            /**
+             * Composition First
+             * @default false
+             */
+            composition_first: boolean;
+            /**
+             * Critical Path
+             * @default false
+             */
+            critical_path: boolean;
             /** Engine */
             engine: string;
             /** Excluded */
@@ -1298,6 +1556,8 @@ export interface components {
             strategy?: string | null;
             /** Timezone */
             timezone: string;
+            /** Town Hall Skip Lanes */
+            town_hall_skip_lanes?: string[];
             /** War Windows */
             war_windows?: components["schemas"]["WarWindow"][];
             /** Warnings */
@@ -1307,6 +1567,16 @@ export interface components {
         PlanRequest: {
             /** Composition */
             composition?: number[];
+            /**
+             * Composition First
+             * @default false
+             */
+            composition_first: boolean;
+            /**
+             * Critical Path
+             * @default false
+             */
+            critical_path: boolean;
             /** Engine */
             engine?: string | null;
             goal?: components["schemas"]["GoalRef"] | null;
@@ -1316,6 +1586,8 @@ export interface components {
             profile?: ("fast" | "repro") | null;
             /** Strategy */
             strategy?: string | null;
+            /** Town Hall Skip Lanes */
+            town_hall_skip_lanes?: string[];
             /** War Windows */
             war_windows?: components["schemas"]["WarWindow"][];
         };
@@ -1423,6 +1695,8 @@ export interface components {
         RecommendationsOut: {
             /** Actions */
             actions: components["schemas"]["ActionOut"][];
+            /** Critical Alerts */
+            critical_alerts: (components["schemas"]["ChainStoppedOut"] | components["schemas"]["LaneStoppedOut"])[];
             /** Fictional */
             fictional: boolean;
             /** Now */
@@ -1636,7 +1910,7 @@ export interface components {
             /** Name */
             name: string;
             /** Overlays */
-            overlays: (components["schemas"]["StartNowIn"] | components["schemas"]["ReserveBuilderIn"] | components["schemas"]["AbsenceIn"] | components["schemas"]["PolicyIn"] | components["schemas"]["StrategyIn"] | components["schemas"]["ReducePlayIn"] | components["schemas"]["UseItemIn"])[];
+            overlays: (components["schemas"]["StartNowIn"] | components["schemas"]["StartAtIn"] | components["schemas"]["ReserveBuilderIn"] | components["schemas"]["AbsenceIn"] | components["schemas"]["PolicyIn"] | components["schemas"]["StrategyIn"] | components["schemas"]["ReducePlayIn"] | components["schemas"]["UseItemIn"])[];
             /** Profile */
             profile?: ("fast" | "repro") | null;
         };
@@ -1733,6 +2007,21 @@ export interface components {
             retrieved_at: string;
             /** Url */
             url: string | null;
+        };
+        /**
+         * StartAtIn
+         * @description Start `task_id` at the first instant from the UTC epoch `at` the simulator accepts.
+         */
+        StartAtIn: {
+            /** At */
+            at: number;
+            /** Task Id */
+            task_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "start_at";
         };
         /**
          * StartNowIn
@@ -1839,6 +2128,36 @@ export interface components {
         ToEpochIn: {
             /** Local Datetime */
             local_datetime: string;
+        };
+        /**
+         * TownHallCompareRequest
+         * @description Without `engine` and `profile`, the defaults of `POST plans` (profile `fast`); without
+         *     `skip_lanes`, the latest plan's `town_hall_skip_lanes`.
+         */
+        TownHallCompareRequest: {
+            /** Engine */
+            engine?: string | null;
+            /** Profile */
+            profile?: ("fast" | "repro") | null;
+            /** Skip Lanes */
+            skip_lanes?: string[] | null;
+        };
+        /**
+         * TownHallComparisonOut
+         * @description The town hall aimed at, the lanes it does not wait for under `after`, and the options.
+         */
+        TownHallComparisonOut: {
+            /** Now */
+            now: number;
+            /** Options */
+            options: components["schemas"]["LaunchOptionOut"][];
+            /** Reference Plan Id */
+            reference_plan_id: number;
+            /** Scope */
+            scope: string;
+            /** Skip Lanes */
+            skip_lanes: string[];
+            target: components["schemas"]["CriticalTargetOut"] | null;
         };
         /** UpgradedOut */
         UpgradedOut: {
@@ -2367,6 +2686,57 @@ export interface operations {
             };
         };
     };
+    get_critical_path_api_villages__village_id__critical_path_get: {
+        parameters: {
+            query?: {
+                skip_lanes?: string[] | null;
+            };
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CriticalPathOut"];
+                };
+            };
+            /** @description Unknown village (code village_not_found). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_lane or invalid_request. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_diff_api_villages__village_id__diff_get: {
         parameters: {
             query?: {
@@ -2807,7 +3177,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Code unknown_engine, unknown_strategy, invalid_goal or invalid_request. */
+            /** @description Code unknown_engine, unknown_strategy, invalid_goal, unknown_lane or invalid_request. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3462,6 +3832,59 @@ export interface operations {
             };
             /** @description Codes coc_rate_limited, coc_unavailable. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_town_hall_compare_api_villages__village_id__town_hall_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                village_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TownHallCompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TownHallComparisonOut"];
+                };
+            };
+            /** @description Code village_not_found or no_plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code missing_input or no_active_pack. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Code unknown_engine, unknown_strategy, unknown_lane or invalid_request. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

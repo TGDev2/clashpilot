@@ -5,6 +5,7 @@ import {
   type ApiProblem,
   api,
   type PlanOut,
+  planBody,
   type RecommendationsOut,
   type ReplanOut,
   settle,
@@ -137,7 +138,7 @@ export function NowPage() {
     const outcome = await settle(() =>
       api().POST("/api/villages/{village_id}/plans", {
         params: { path: { village_id: villageId } },
-        body: {},
+        body: planBody({}),
       }),
     );
     setBusy(false);
