@@ -1,31 +1,56 @@
 import { Link } from "react-aria-components";
 import { Outlet, useLocation } from "react-router";
+import type { Base } from "../api/client";
 import { fr } from "../i18n/fr";
+import { useLabels, useVillage } from "../state/village";
 import { ReminderAnnouncer } from "./ReminderAnnouncer";
+import { inputClass } from "./ui";
 
 const LINKS = [
-  { to: "/", label: fr.nav.dashboard },
-  { to: "/importer", label: fr.nav.import },
-  { to: "/maintenant", label: fr.nav.now },
-  { to: "/calendrier", label: fr.nav.calendar },
-  { to: "/constructeurs", label: fr.nav.builders },
-  { to: "/strategie", label: fr.nav.strategy },
-  { to: "/hdv", label: fr.nav.townHall },
-  { to: "/ressources", label: fr.nav.resources },
-  { to: "/scenarios", label: fr.nav.scenarios },
-  { to: "/objets", label: fr.nav.items },
-  { to: "/historique", label: fr.nav.history },
-  { to: "/reglages", label: fr.nav.settings },
+  { to: "/", key: "dashboard" },
+  { to: "/importer", key: "import" },
+  { to: "/maintenant", key: "now" },
+  { to: "/calendrier", key: "calendar" },
+  { to: "/constructeurs", key: "builders" },
+  { to: "/strategie", key: "strategy" },
+  { to: "/hdv", key: "townHall" },
+  { to: "/ressources", key: "resources" },
+  { to: "/scenarios", key: "scenarios" },
+  { to: "/objets", key: "items" },
+  { to: "/historique", key: "history" },
+  { to: "/reglages", key: "settings" },
 ] as const;
+
+/** Which base of the village every page shows. */
+function BaseSelector() {
+  const { base, setBase } = useVillage();
+  return (
+    <label className="block w-full space-y-1 sm:w-auto">
+      <span className="block text-xs text-mist">{fr.village.selector}</span>
+      <select
+        value={base}
+        onChange={(event) => setBase(event.target.value as Base)}
+        className={`${inputClass} sm:w-56`}
+      >
+        <option value="home">{fr.village.home}</option>
+        <option value="builder">{fr.village.builder}</option>
+      </select>
+    </label>
+  );
+}
 
 export function Layout() {
   const { pathname } = useLocation();
+  const { nav } = useLabels();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-deck">
-        <div className="mx-auto max-w-5xl px-4 pt-5 sm:px-6">
-          <h1 className="font-display text-2xl tracking-tight text-bone">{fr.app.title}</h1>
-          <p className="text-sm text-mist">{fr.app.tagline}</p>
+        <div className="mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-3 px-4 pt-5 sm:px-6">
+          <div>
+            <h1 className="font-display text-2xl tracking-tight text-bone">{fr.app.title}</h1>
+            <p className="text-sm text-mist">{fr.app.tagline}</p>
+          </div>
+          <BaseSelector />
         </div>
         <nav
           aria-label={fr.app.mainNav}
@@ -45,7 +70,7 @@ export function Layout() {
                         : "border-transparent text-mist hover:bg-deck-hi hover:text-bone"
                     }`}
                   >
-                    {link.label}
+                    {nav[link.key]}
                   </Link>
                 </li>
               );

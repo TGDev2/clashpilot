@@ -10,9 +10,12 @@ function laneRank(lane: string): number {
   return rank === -1 ? LANE_ORDER.length : rank;
 }
 
-/** "Constructeur 1" for builder slot 0: the French lane name and the slot counted from 1. */
-export function laneLabel(lane: string, slot: number): string {
-  const name = (fr.lanes as Record<string, string>)[lane] ?? lane;
+/**
+ * "Constructeur 1" for builder slot 0: the French lane name and the slot counted from 1. `names`
+ * are the lane names of the chosen base.
+ */
+export function laneLabel(lane: string, slot: number, names: Record<string, string>): string {
+  const name = names[lane] ?? lane;
   return `${name} ${slot + 1}`;
 }
 
@@ -32,7 +35,10 @@ export function compareAssignments(a: AssignmentOut, b: AssignmentOut): number {
 }
 
 /** One row per `(lane, lane_slot)` pair of the assignments, in display order. */
-export function laneRows(assignments: readonly AssignmentOut[]): LaneRow[] {
+export function laneRows(
+  assignments: readonly AssignmentOut[],
+  names: Record<string, string>,
+): LaneRow[] {
   const rows = new Map<string, LaneRow>();
   for (const a of [...assignments].sort(compareAssignments)) {
     const key = `${a.lane}:${a.lane_slot}`;
@@ -41,7 +47,7 @@ export function laneRows(assignments: readonly AssignmentOut[]): LaneRow[] {
         key,
         lane: a.lane,
         slot: a.lane_slot,
-        label: laneLabel(a.lane, a.lane_slot),
+        label: laneLabel(a.lane, a.lane_slot, names),
       });
     }
   }

@@ -4,6 +4,7 @@ import type { AssignmentOut, SchedulePreview } from "../../api/client";
 import { fr } from "../../i18n/fr";
 import { formatInZone } from "../../lib/format";
 import { formatCivilDay, localDayStarts, SECONDS_PER_DAY } from "../../lib/time";
+import { useLabels } from "../../state/village";
 import { laneRows, sheetHref, statusLabel } from "./lanes";
 
 /** Horizontal room given to one day, so a 90-day plan scrolls instead of squeezing. */
@@ -57,7 +58,8 @@ export function GanttChart({
   const to = Math.max(...assignments.map((a) => a.end));
   const span = Math.max(1, to - from);
   const position = (epoch: number) => ((epoch - from) / span) * 100;
-  const rows = useMemo(() => laneRows(assignments), [assignments]);
+  const { lanes } = useLabels();
+  const rows = useMemo(() => laneRows(assignments, lanes), [assignments, lanes]);
   const days = useMemo(() => localDayStarts(from, to, timezone), [from, to, timezone]);
   const width = Math.max(MIN_WIDTH_PX, Math.ceil((span / SECONDS_PER_DAY) * PX_PER_DAY));
 

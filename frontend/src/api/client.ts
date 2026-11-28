@@ -29,6 +29,18 @@ export type SchedulePreview = {
     : PreviewSchema[K];
 };
 
+/** The home village or the builder base: the API computes and reads one of them at a time. */
+export type Base = components["schemas"]["PlanRequest"]["base"];
+
+/**
+ * What a query or a body adds for `base`: nothing for the home village, the server default, so its
+ * requests carry no `base` at all. `critical-path` and `town-hall/compare` accept the field although
+ * their OpenAPI documents leave it out: spread it there, the typed client does not declare it.
+ */
+export function baseParams(base: Base): { base?: "builder" } {
+  return base === "builder" ? { base } : {};
+}
+
 type PlanRequest = components["schemas"]["PlanRequest"];
 /** The options of `POST .../plans` that take a server default: false, and the home village. */
 type PlanFlags = "critical_path" | "composition_first" | "base";

@@ -4,6 +4,7 @@ import {
   type ActionOut,
   type ApiProblem,
   api,
+  baseParams,
   type CriticalAlertOut,
   type PlanOut,
   planBody,
@@ -20,7 +21,7 @@ import { Banner, Button, PageTitle, ProblemAlert, Section, Tag } from "../compon
 import { fr } from "../i18n/fr";
 import { formatDuration, formatInZone, laneSubject } from "../lib/format";
 import { uniqueKeys } from "../lib/keys";
-import { useVillage } from "../state/village";
+import { useLabels, useVillage } from "../state/village";
 
 type Explained = ActionOut["advantages"][number];
 
@@ -68,8 +69,12 @@ function ActionTags({ action, ownUnit }: { action: ActionOut; ownUnit: boolean }
 
 /** A critical chain or lane standing idle, with the idle time the plan already holds. */
 function StoppedAlert({ alert }: { alert: CriticalAlertOut }) {
-  const subject = alert.code === "chain_stopped" ? alert.name : laneSubject(alert.lane);
-  const sentence = fr.now.stopped(
+  const t = useLabels();
+  const subject =
+    alert.code === "chain_stopped"
+      ? alert.name
+      : laneSubject(alert.lane, t.criticalPath.laneSubject);
+  const sentence = t.now.stopped(
     subject.charAt(0).toUpperCase() + subject.slice(1),
     // "Les ouvriers" is the only plural lane name.
     alert.code === "lane_stopped" && alert.lane === "builder",
@@ -156,15 +161,15 @@ function MissingInputAlert({ problem }: { problem: ApiProblem }) {
 
 /** The next actions of the latest plan, and the button that computes a new plan. */
 export function NowPage() {
-  const { villageId } = useVillage();
+  const { villageId, base } = useVillage();
   const reco = useApi<RecommendationsOut>(
     () =>
       settle(() =>
         api().GET("/api/villages/{village_id}/recommendations/now", {
-          params: { path: { village_id: villageId ?? "" } },
+          params: { path: { village_id: villageId ?? "" }, query: baseParams(base) },
         }),
       ),
-    villageId,
+    villageId === null ? null : `${villageId}:${base}`,
   );
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -172,7 +177,7 @@ export function NowPage() {
   const [problem, setProblem] = useState<ApiProblem | undefined>();
   const [applied, setApplied] = useState<ReplanOut | undefined>();
   // The composition of the latest plan, read again when the recommendations move to a new plan.
-  const latest = useLatestPlan(villageId, String(reco.data?.plan_id ?? ""));
+  const latest = useLatestPlan(villageId, base, String(reco.data?.plan_id ?? ""));
   const composition = new Set(latest.data?.composition ?? []);
   const ownTasks = new Set(
     (latest.data?.assignments ?? [])
@@ -192,7 +197,7 @@ export function NowPage() {
     const outcome = await settle(() =>
       api().POST("/api/villages/{village_id}/plans", {
         params: { path: { village_id: villageId } },
-        body: planBody({}),
+        body: planBody(baseParams(base)),
       }),
     );
     setBusy(false);

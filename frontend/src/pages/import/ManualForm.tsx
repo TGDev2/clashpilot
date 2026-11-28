@@ -1,9 +1,16 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { type ApiProblem, api, type ManualOut, manualBody, settle } from "../../api/client";
+import {
+  type ApiProblem,
+  api,
+  type Base,
+  type ManualOut,
+  manualBody,
+  settle,
+} from "../../api/client";
 import { useApi } from "../../api/useApi";
 import { ProvenanceBadge } from "../../components/ProvenanceBadge";
 import { Button, inputClass, ProblemAlert, Section, TextAlert } from "../../components/ui";
-import { fr } from "../../i18n/fr";
+import { fr, frBuilder } from "../../i18n/fr";
 import { formatDate, formatNumber } from "../../lib/format";
 
 const RESOURCES = [
@@ -14,7 +21,11 @@ const RESOURCES = [
   "shiny_ore",
   "glowy_ore",
   "starry_ore",
+  "builder_gold",
+  "builder_elixir",
 ] as const;
+/** The stocks of the builder base. */
+const BUILDER_RESOURCES: readonly Resource[] = ["builder_gold", "builder_elixir"];
 type Resource = (typeof RESOURCES)[number];
 type TypedStatus = "confirmed" | "estimated";
 type Rate = { low: string; expected: string; high: string };
@@ -27,10 +38,9 @@ type EventDraft = {
   end: string;
   durationCut: string;
   costCut: string;
-  /** The village of a saved event, sent back as it came; absent = the server default (home). */
+  /** As saved or chosen; absent = never said, the server default (home). */
   base?: Base;
 };
-type Base = "home" | "builder";
 const EVENT_LANES = ["builder", "lab", "pet_house", "blacksmith"] as const;
 
 type Draft = {
@@ -38,6 +48,7 @@ type Draft = {
   statuses: Record<Resource, TypedStatus>;
   rates: Record<Resource, Rate>;
   builders: string;
+  builderBaseBuilders: string;
   items: ItemDraft[];
   events: EventDraft[];
 };
@@ -76,6 +87,7 @@ function blankDraft(): Draft {
     statuses: everyResource<TypedStatus>(() => "confirmed"),
     rates: everyResource(() => ({ low: "", expected: "", high: "" })),
     builders: "",
+    builderBaseBuilders: "",
     items: [blankItem()],
     events: [],
   };
@@ -100,6 +112,7 @@ function draftOf(saved: ManualOut): Draft {
     }
   }
   draft.builders = saved.builders_total === null ? "" : String(saved.builders_total);
+  draft.builderBaseBuilders = String(saved.builder_base_builders ?? "");
   const items = Object.entries(saved.magic_items).map(([name, quantity]) => ({
     id: nextItemId++,
     name,
@@ -134,14 +147,30 @@ function count(text: string): number | null {
   return Number(trimmed);
 }
 
+/**
+ * When a typed stock was true: now, except a builder base stock left as saved, which keeps its
+ * date, so that saving the form for something else does not pass an old stock off as a fresh one.
+ */
+function dateOf(
+  name: Resource,
+  value: number,
+  status: TypedStatus,
+  saved: ManualOut | undefined,
+  now: number,
+): number {
+  const kept = BUILDER_RESOURCES.includes(name) ? saved?.resources[name] : undefined;
+  return kept !== undefined && kept.value === value && kept.status === status ? kept.as_of : now;
+}
+
 /** Build the request body. A blank field is left out: absent means unknown, never 0. */
-function bodyOf(draft: Draft, asOf: number) {
+function bodyOf(draft: Draft, saved: ManualOut | undefined, now: number) {
   const resources: Record<string, { value: number; status: TypedStatus; as_of: number }> = {};
   const farmRate: Record<string, { low: number; expected: number; high: number }> = {};
   for (const name of RESOURCES) {
     const value = count(draft.values[name]);
     if (value !== null) {
-      resources[name] = { value, status: draft.statuses[name], as_of: asOf };
+      const status = draft.statuses[name];
+      resources[name] = { value, status, as_of: dateOf(name, value, status, saved, now) };
     }
     const lo = count(draft.rates[name].low);
     const ex = count(draft.rates[name].expected);
@@ -187,9 +216,11 @@ function bodyOf(draft: Draft, asOf: number) {
       ...(event.base !== undefined ? { base: event.base } : {}),
     };
   });
+  const builderBaseBuilders = count(draft.builderBaseBuilders);
   return {
     resources,
     builders_total: count(draft.builders),
+    ...(builderBaseBuilders === null ? {} : { builder_base_builders: builderBaseBuilders }),
     farm_rate: farmRate,
     magic_items: magicItems,
     events,
@@ -246,6 +277,14 @@ function Saved({ saved }: { saved: ManualOut }) {
           <li className="flex flex-wrap items-center gap-x-3 py-1">
             <span className="w-40">{fr.dashboard.builders}</span>
             <span className="font-mono tabular-nums">{formatNumber(saved.builders_total)}</span>
+          </li>
+        )}
+        {typeof saved.builder_base_builders === "number" && (
+          <li className="flex flex-wrap items-center gap-x-3 py-1">
+            <span className="w-40">{fr.manual.builderBaseBuilders}</span>{" "}
+            <span className="font-mono tabular-nums">
+              {formatNumber(saved.builder_base_builders)}
+            </span>
           </li>
         )}
         {RESOURCES.flatMap((name) => {
@@ -319,7 +358,7 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
     setLocalError(undefined);
     let body: ReturnType<typeof bodyOf>;
     try {
-      body = bodyOf(draft, Math.floor(Date.now() / 1000));
+      body = bodyOf(draft, saved, Math.floor(Date.now() / 1000));
     } catch (error) {
       if (error instanceof DraftError) {
         setLocalError(error.message);
@@ -331,30 +370,12 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
     const kept = {
       gold_pass: saved?.gold_pass ?? {},
       storage_override: saved?.storage_override ?? {},
-      builder_base_builders: saved?.builder_base_builders ?? null,
     };
-    const shown = new Set<string>(RESOURCES);
-    const keptResources = Object.fromEntries(
-      Object.entries(saved?.resources ?? {})
-        .filter(([name]) => !shown.has(name))
-        .map(([name, typed]) => [
-          name,
-          { value: typed.value, status: typed.status as TypedStatus, as_of: typed.as_of },
-        ]),
-    );
-    const keptRates = Object.fromEntries(
-      Object.entries(saved?.farm_rate ?? {}).filter(([name]) => !shown.has(name)),
-    ) as typeof body.farm_rate;
     setBusy(true);
     const outcome = await settle(() =>
       api().PUT("/api/villages/{village_id}/manual", {
         params: { path: { village_id: villageId } },
-        body: manualBody({
-          ...kept,
-          ...body,
-          resources: { ...keptResources, ...body.resources },
-          farm_rate: { ...keptRates, ...body.farm_rate },
-        }),
+        body: manualBody({ ...kept, ...body }),
       }),
     );
     setBusy(false);
@@ -439,11 +460,16 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
           </div>
         </div>
 
-        <div className="max-w-xs">
+        <div className="grid max-w-lg gap-4 sm:grid-cols-2">
           <NumberField
             label={fr.manual.builders}
             value={draft.builders}
             onChange={(value) => edit((d) => ({ ...d, builders: value }))}
+          />
+          <NumberField
+            label={fr.manual.builderBaseBuilders}
+            value={draft.builderBaseBuilders}
+            onChange={(value) => edit((d) => ({ ...d, builderBaseBuilders: value }))}
           />
         </div>
 
@@ -508,6 +534,17 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
                   />
                 </label>
                 <label className="block space-y-1">
+                  <span className="block text-xs text-mist">{fr.manual.eventVillage}</span>
+                  <select
+                    value={event.base ?? "home"}
+                    onChange={(e) => change({ base: e.target.value as Base })}
+                    className={inputClass}
+                  >
+                    <option value="home">{fr.village.home}</option>
+                    <option value="builder">{fr.village.builder}</option>
+                  </select>
+                </label>
+                <label className="block space-y-1">
                   <span className="block text-xs text-mist">{fr.manual.eventLane}</span>
                   <select
                     value={event.lane}
@@ -516,7 +553,7 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
                   >
                     {EVENT_LANES.map((lane) => (
                       <option key={lane} value={lane}>
-                        {fr.manual.lanes[lane]}
+                        {(event.base === "builder" ? frBuilder : fr).manual.lanes[lane]}
                       </option>
                     ))}
                   </select>

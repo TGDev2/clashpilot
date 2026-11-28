@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { api, type JournalEntryOut, settle } from "../api/client";
+import { api, baseParams, type JournalEntryOut, settle } from "../api/client";
 import { useApi } from "../api/useApi";
 import { sheetHref } from "../components/gantt/lanes";
 import { PageTitle, ProblemAlert, Section } from "../components/ui";
@@ -35,15 +35,15 @@ function Entry({ entry, timezone }: { entry: JournalEntryOut; timezone: string }
 
 /** The journal of the village, most recent event first, as the API sends it. */
 export function History() {
-  const { villageId } = useVillage();
+  const { villageId, base } = useVillage();
   const journal = useApi<JournalEntryOut[]>(
     () =>
       settle(() =>
         api().GET("/api/villages/{village_id}/journal", {
-          params: { path: { village_id: villageId ?? "" } },
+          params: { path: { village_id: villageId ?? "" }, query: baseParams(base) },
         }),
       ),
-    villageId,
+    villageId === null ? null : `${villageId}:${base}`,
   );
   // The zone of the schedule; without a schedule, UTC (said aloud below).
   const schedule = useApi(

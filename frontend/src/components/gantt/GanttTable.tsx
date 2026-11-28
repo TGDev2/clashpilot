@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { AssignmentOut } from "../../api/client";
 import { fr } from "../../i18n/fr";
 import { formatInZone } from "../../lib/format";
+import { useLabels } from "../../state/village";
 import { compareAssignments, laneLabel, sheetHref, statusLabel } from "./lanes";
 
 const cell = "border-b border-line/60 px-3 py-2 align-top";
@@ -14,6 +15,7 @@ export function GanttTable({
   assignments: readonly AssignmentOut[];
   timezone: string;
 }) {
+  const { lanes } = useLabels();
   const sorted = [...assignments].sort(compareAssignments);
   return (
     <div className="overflow-x-auto">
@@ -43,7 +45,7 @@ export function GanttTable({
         <tbody>
           {sorted.map((a) => (
             <tr key={a.task_id}>
-              <td className={cell}>{laneLabel(a.lane, a.lane_slot)}</td>
+              <td className={cell}>{laneLabel(a.lane, a.lane_slot, lanes)}</td>
               <td className={cell}>
                 <Link
                   to={sheetHref(a.task_id)}

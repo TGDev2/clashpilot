@@ -45,8 +45,8 @@ export function PlanGate({
   zoneNote?: boolean;
   children: (plan: PlanOut) => ReactNode;
 }) {
-  const { villageId } = useVillage();
-  const latest = useLatestPlan(villageId);
+  const { villageId, base } = useVillage();
+  const latest = useLatestPlan(villageId, base);
   const code = latest.problem?.code;
   const noPlan = villageId === null || code === "no_plan" || code === "village_not_found";
   const plan = latest.data;

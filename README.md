@@ -63,6 +63,37 @@ Un pack ne doit pas dépasser 5 Mo.
 4. Renseignez vos horaires dans **Réglages**, puis calculez votre plan dans **Que faire
    maintenant ?**.
 
+## Base des ouvriers
+
+La base des ouvriers se planifie à part du village principal : ses ouvriers, son labo des étoiles,
+son or et son élixir ne sont pas partagés.
+
+1. **Reconstruisez le pack de données** avec la commande ci-dessus, à partir d'un jeu de données qui
+   contient le dossier `builder`, puis importez-le, activez-le et réimportez votre export. Un pack
+   sans objet de la base des ouvriers donne un plan vide pour elle.
+2. Page **Importer**, section « Saisie manuelle » : saisissez le nombre d'« Ouvriers de la base »,
+   l'« Or des ouvriers » et l'« Élixir des ouvriers » (et leurs revenus par heure si vous les
+   connaissez). Sans nombre d'ouvriers saisi, il est estimé d'après les améliorations de bâtiments
+   en cours dans l'export, au moins 1, et marqué « Estimé ». Chaque événement du jeu saisi porte son
+   village.
+3. En haut de l'application, dans **Village affiché**, choisissez « Village principal » ou « Base
+   des ouvriers ». Le choix est mémorisé dans ce navigateur. Le tableau de bord, Que faire
+   maintenant ?, le calendrier, les constructeurs, l'historique, la page Stratégie (avec la liste
+   des troupes pour la composition) et la page `/hdv` portent alors sur ce village : calculez un plan
+   pour chacun.
+
+Limites :
+
+- les pages Ressources, Scénarios et Objets magiques sont disponibles pour le village principal
+  seulement ;
+- les rappels et l'export vers l'agenda (`.ics`) suivent le plan du village principal ;
+- sur le tableau de bord, les stocks et le nombre de constructeurs restent ceux du village
+  principal ; les listes des éléments et des améliorations en cours couvrent les deux villages ;
+- l'accélération de la Tour de l'horloge et l'effet des aides ne sont pas modélisés ;
+- le Contrôle de B.O.B n'est pas relié au village principal : une fois l'ouvrier qu'il lui apporte
+  débloqué, comptez-le vous-même dans « Nombre de constructeurs » ;
+- les niveaux payables « en or ou en élixir » des ouvriers sont écartés du pack et signalés.
+
 ## Date d'Hôtel de Ville et chemin critique
 
 **La date au plus tôt.** Le tableau de bord estime quand le prochain Hôtel de Ville peut être fini.
