@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "pack_id": "fictional-test-pack-builder-base",
+  "game_version": "test-builder-base-0",
+  "as_of": "2026-01-01",
+  "fictional": true,
+  "sources": [
+    {
+      "id": "s1",
+      "label": "Source fictive de test",
+      "url": "https://example.invalid/fictional-builder-base-pack",
+      "retrieved_at": "2026-01-01",
+      "license": "CC0-1.0"
+    }
+  ],
+  "items": [
+    {"data_id": 9300001, "name": "Beffroi du port", "kind": "building", "village": "home", "lane": "builder", "category": "town_hall", "tags": ["town_hall"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9300002, "name": "Cabane du port", "kind": "building", "village": "home", "lane": "none", "category": "builder_hut", "tags": ["builder_hut"], "max_count_by_th": {"1": 2}},
+    {"data_id": 9300003, "name": "Atelier du port", "kind": "building", "village": "home", "lane": "builder", "category": "laboratory", "tags": ["laboratory"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9300004, "name": "Canon de foire", "kind": "building", "village": "home", "lane": "builder", "category": "defense", "tags": ["defense"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9300005, "name": "Pique-lune", "kind": "troop", "village": "home", "lane": "lab", "category": "troop", "tags": []},
+    {"data_id": 9400001, "name": "Maison des artisans", "kind": "building", "village": "builder", "lane": "builder", "category": "town_hall", "tags": ["town_hall"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400002, "name": "Cabane d'artisan", "kind": "building", "village": "builder", "lane": "none", "category": "builder_hut", "tags": ["builder_hut"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400003, "name": "Observatoire des artisans", "kind": "building", "village": "builder", "lane": "builder", "category": "laboratory", "tags": ["laboratory"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400004, "name": "Lance-bulles", "kind": "building", "village": "builder", "lane": "builder", "category": "defense", "tags": ["defense"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400005, "name": "Tour à hélices", "kind": "building", "village": "builder", "lane": "builder", "category": "defense", "tags": ["defense"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400006, "name": "Grognard de sable", "kind": "troop", "village": "builder", "lane": "lab", "category": "troop", "tags": []},
+    {"data_id": 9400007, "name": "Gardien du crépuscule", "kind": "hero", "village": "builder", "lane": "builder", "category": "hero", "tags": ["hero"], "max_count_by_th": {"1": 1}},
+    {"data_id": 9400009, "name": "Tour à grêle", "kind": "building", "village": "builder", "lane": "builder", "category": "defense", "tags": ["defense"], "max_count_by_th": {"2": 1}}
+  ],
+  "levels": [
+    {"data_id": 9300001, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9300001, "level": 2, "duration_s": 172800, "cost": {"gold": 20000}, "requires": [], "source": "s1"},
+    {"data_id": 9300002, "level": 1, "duration_s": 60, "cost": {}, "requires": [], "source": "s1"},
+    {"data_id": 9300003, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9300003, "level": 2, "duration_s": 86400, "cost": {"gold": 5000}, "requires": [{"data_id": 9300001, "level": 2}], "source": "s1"},
+    {"data_id": 9300004, "level": 1, "duration_s": 60, "cost": {"gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9300004, "level": 2, "duration_s": 86400, "cost": {"gold": 3000}, "requires": [], "source": "s1"},
+    {"data_id": 9300004, "level": 3, "duration_s": 172800, "cost": {"gold": 6000}, "requires": [{"data_id": 9300001, "level": 2}], "source": "s1"},
+    {"data_id": 9300005, "level": 1, "duration_s": 60, "cost": {"elixir": 10}, "requires": [], "source": "s1"},
+    {"data_id": 9300005, "level": 2, "duration_s": 43200, "cost": {"elixir": 2000}, "requires": [{"data_id": 9300003, "level": 1}], "source": "s1"},
+    {"data_id": 9300005, "level": 3, "duration_s": 86400, "cost": {"elixir": 4000}, "requires": [{"data_id": 9300003, "level": 2}], "source": "s1"},
+    {"data_id": 9400001, "level": 1, "duration_s": 60, "cost": {"builder_gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9400001, "level": 2, "duration_s": 172800, "cost": {"builder_gold": 50000}, "requires": [], "source": "s1"},
+    {"data_id": 9400001, "level": 3, "duration_s": 259200, "cost": {"builder_gold": 90000}, "requires": [], "source": "s1"},
+    {"data_id": 9400002, "level": 1, "duration_s": 60, "cost": {}, "requires": [], "source": "s1"},
+    {"data_id": 9400003, "level": 1, "duration_s": 60, "cost": {"builder_gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9400003, "level": 2, "duration_s": 86400, "cost": {"builder_gold": 20000}, "requires": [{"data_id": 9400001, "level": 2}], "source": "s1"},
+    {"data_id": 9400004, "level": 1, "duration_s": 60, "cost": {"builder_gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9400004, "level": 2, "duration_s": 86400, "cost": {"builder_gold": 4000}, "requires": [], "source": "s1"},
+    {"data_id": 9400004, "level": 3, "duration_s": 86400, "cost": {"builder_gold": 8000}, "requires": [], "source": "s1"},
+    {"data_id": 9400004, "level": 4, "duration_s": 172800, "cost": {"builder_gold": 30000}, "requires": [{"data_id": 9400001, "level": 2}], "source": "s1"},
+    {"data_id": 9400005, "level": 1, "duration_s": 60, "cost": {"builder_gold": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9400005, "level": 2, "duration_s": 172800, "cost": {"builder_gold": 6000}, "requires": [], "source": "s1"},
+    {"data_id": 9400005, "level": 3, "duration_s": 86400, "cost": {"builder_gold": 9000}, "requires": [], "source": "s1"},
+    {"data_id": 9400006, "level": 1, "duration_s": 60, "cost": {"builder_elixir": 10}, "requires": [], "source": "s1"},
+    {"data_id": 9400006, "level": 2, "duration_s": 21600, "cost": {"builder_elixir": 3000}, "requires": [{"data_id": 9400003, "level": 1}], "source": "s1"},
+    {"data_id": 9400006, "level": 3, "duration_s": 43200, "cost": {"builder_elixir": 6000}, "requires": [{"data_id": 9400003, "level": 1}], "source": "s1"},
+    {"data_id": 9400007, "level": 1, "duration_s": 60, "cost": {"builder_elixir": 100}, "requires": [], "source": "s1"},
+    {"data_id": 9400007, "level": 2, "duration_s": 259200, "cost": {"builder_elixir": 10000}, "requires": [], "source": "s1"},
+    {"data_id": 9400007, "level": 3, "duration_s": 259200, "cost": {"builder_elixir": 20000}, "requires": [{"data_id": 9400001, "level": 2}], "source": "s1"},
+    {"data_id": 9400009, "level": 1, "duration_s": 86400, "cost": {"builder_gold": 15000}, "requires": [], "source": "s1"}
+  ],
+  "storage": [
+    {"data_id": 9300001, "level": 1, "resource": "gold", "capacity": 100000, "source": "s1"},
+    {"data_id": 9300001, "level": 1, "resource": "elixir", "capacity": 100000, "source": "s1"},
+    {"data_id": 9400001, "level": 1, "resource": "builder_gold", "capacity": 100000, "source": "s1"},
+    {"data_id": 9400001, "level": 1, "resource": "builder_elixir", "capacity": 100000, "source": "s1"}
+  ],
+  "rules": {}
+}

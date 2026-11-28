@@ -1,0 +1,425 @@
+{
+ "builder_base_fixture": {
+  "__type__": "Problem",
+  "calendar": {
+   "__type__": "AvailabilityCalendar",
+   "absence": [],
+   "available": [],
+   "preferred": [],
+   "sleep": [],
+   "tz": "UTC",
+   "work": []
+  },
+  "excluded": [],
+  "frozen": [
+   {
+    "__type__": "FrozenJob",
+    "end": 1795935600,
+    "extra": false,
+    "lane": "builder",
+    "lane_slot": 0,
+    "start": 1795849200,
+    "task_id": "9300004:0:2"
+   }
+  ],
+  "goal": null,
+  "hero_blackouts": [],
+  "horizon_end": 1803628800,
+  "lanes": {
+   "builder": 2,
+   "lab": 1
+  },
+  "modifiers": [
+   {
+    "__type__": "Modifier",
+    "cost_pct": 100,
+    "duration_pct": 50,
+    "end": 1795939200,
+    "lane": "builder",
+    "start": 1795852800
+   }
+  ],
+  "now": 1795852800,
+  "policy": {
+   "__type__": "Policy",
+   "login_merge_s": 900,
+   "max_logins_per_day": null,
+   "mode": "progress",
+   "tolerance_s": 0
+  },
+  "resources": {
+   "__type__": "ResourceModel",
+   "cap": {
+    "elixir": 100000,
+    "gold": 100000
+   },
+   "income_per_hour": {
+    "elixir": 0,
+    "gold": 1000
+   },
+   "initial": {
+    "elixir": 50000,
+    "gold": 50000
+   }
+  },
+  "tasks": [
+   {
+    "__type__": "Task",
+    "category": "town_hall",
+    "cost": {
+     "gold": 20000
+    },
+    "data_id": 9300001,
+    "duration_s": 172800,
+    "id": "9300001:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [],
+    "tags": [
+     "town_hall",
+     "building"
+    ],
+    "to_level": 2,
+    "value": 48.0
+   },
+   {
+    "__type__": "Task",
+    "category": "laboratory",
+    "cost": {
+     "gold": 5000
+    },
+    "data_id": 9300003,
+    "duration_s": 86400,
+    "id": "9300003:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9300001:0:2"
+    ],
+    "tags": [
+     "laboratory",
+     "building"
+    ],
+    "to_level": 2,
+    "value": 24.0
+   },
+   {
+    "__type__": "Task",
+    "category": "defense",
+    "cost": {
+     "gold": 6000
+    },
+    "data_id": 9300004,
+    "duration_s": 172800,
+    "id": "9300004:0:3",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9300001:0:2",
+     "9300004:0:2"
+    ],
+    "tags": [
+     "defense",
+     "building"
+    ],
+    "to_level": 3,
+    "value": 48.0
+   },
+   {
+    "__type__": "Task",
+    "category": "troop",
+    "cost": {
+     "elixir": 2000
+    },
+    "data_id": 9300005,
+    "duration_s": 43200,
+    "id": "9300005:0:2",
+    "instance": 0,
+    "lane": "lab",
+    "requires": [],
+    "tags": [
+     "troop"
+    ],
+    "to_level": 2,
+    "value": 12.0
+   },
+   {
+    "__type__": "Task",
+    "category": "troop",
+    "cost": {
+     "elixir": 4000
+    },
+    "data_id": 9300005,
+    "duration_s": 86400,
+    "id": "9300005:0:3",
+    "instance": 0,
+    "lane": "lab",
+    "requires": [
+     "9300003:0:2",
+     "9300005:0:2"
+    ],
+    "tags": [
+     "troop"
+    ],
+    "to_level": 3,
+    "value": 24.0
+   }
+  ]
+ },
+ "critical_fixture": {
+  "__type__": "Problem",
+  "calendar": {
+   "__type__": "AvailabilityCalendar",
+   "absence": [],
+   "available": [],
+   "preferred": [],
+   "sleep": [],
+   "tz": "UTC",
+   "work": []
+  },
+  "excluded": [],
+  "frozen": [],
+  "goal": null,
+  "hero_blackouts": [],
+  "horizon_end": 1803542400,
+  "lanes": {
+   "builder": 5,
+   "lab": 1
+  },
+  "modifiers": [],
+  "now": 1795766400,
+  "policy": {
+   "__type__": "Policy",
+   "login_merge_s": 900,
+   "max_logins_per_day": null,
+   "mode": "progress",
+   "tolerance_s": 0
+  },
+  "resources": {
+   "__type__": "ResourceModel",
+   "cap": {},
+   "income_per_hour": {
+    "dark_elixir": 0,
+    "elixir": 0,
+    "gold": 0
+   },
+   "initial": {
+    "dark_elixir": 1000000,
+    "elixir": 1000000,
+    "gold": 1000000
+   }
+  },
+  "tasks": [
+   {
+    "__type__": "Task",
+    "category": "town_hall",
+    "cost": {
+     "gold": 9000
+    },
+    "data_id": 9200001,
+    "duration_s": 172800,
+    "id": "9200001:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [],
+    "tags": [
+     "town_hall",
+     "building"
+    ],
+    "to_level": 2,
+    "value": 48.0
+   },
+   {
+    "__type__": "Task",
+    "category": "laboratory",
+    "cost": {
+     "elixir": 2000
+    },
+    "data_id": 9200003,
+    "duration_s": 86400,
+    "id": "9200003:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9200001:0:2"
+    ],
+    "tags": [
+     "laboratory",
+     "building"
+    ],
+    "to_level": 2,
+    "value": 24.0
+   },
+   {
+    "__type__": "Task",
+    "category": "hero",
+    "cost": {
+     "dark_elixir": 200
+    },
+    "data_id": 9200004,
+    "duration_s": 518400,
+    "id": "9200004:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [],
+    "tags": [
+     "hero"
+    ],
+    "to_level": 2,
+    "value": 144.0
+   },
+   {
+    "__type__": "Task",
+    "category": "hero",
+    "cost": {
+     "dark_elixir": 300
+    },
+    "data_id": 9200004,
+    "duration_s": 604800,
+    "id": "9200004:0:3",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9200004:0:2"
+    ],
+    "tags": [
+     "hero"
+    ],
+    "to_level": 3,
+    "value": 168.0
+   },
+   {
+    "__type__": "Task",
+    "category": "hero",
+    "cost": {
+     "dark_elixir": 400
+    },
+    "data_id": 9200004,
+    "duration_s": 691200,
+    "id": "9200004:0:4",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9200004:0:3"
+    ],
+    "tags": [
+     "hero"
+    ],
+    "to_level": 4,
+    "value": 192.0
+   },
+   {
+    "__type__": "Task",
+    "category": "hero",
+    "cost": {
+     "dark_elixir": 500
+    },
+    "data_id": 9200004,
+    "duration_s": 777600,
+    "id": "9200004:0:5",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [
+     "9200004:0:4"
+    ],
+    "tags": [
+     "hero"
+    ],
+    "to_level": 5,
+    "value": 216.0
+   },
+   {
+    "__type__": "Task",
+    "category": "defense",
+    "cost": {
+     "gold": 1000
+    },
+    "data_id": 9200005,
+    "duration_s": 86400,
+    "id": "9200005:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [],
+    "tags": [
+     "building"
+    ],
+    "to_level": 2,
+    "value": 24.0
+   },
+   {
+    "__type__": "Task",
+    "category": "defense",
+    "cost": {
+     "gold": 1500
+    },
+    "data_id": 9200006,
+    "duration_s": 86401,
+    "id": "9200006:0:2",
+    "instance": 0,
+    "lane": "builder",
+    "requires": [],
+    "tags": [
+     "building"
+    ],
+    "to_level": 2,
+    "value": 24.00027777777778
+   },
+   {
+    "__type__": "Task",
+    "category": "troop",
+    "cost": {
+     "elixir": 500
+    },
+    "data_id": 9200007,
+    "duration_s": 86400,
+    "id": "9200007:0:2",
+    "instance": 0,
+    "lane": "lab",
+    "requires": [],
+    "tags": [
+     "troop"
+    ],
+    "to_level": 2,
+    "value": 24.0
+   },
+   {
+    "__type__": "Task",
+    "category": "troop",
+    "cost": {
+     "elixir": 800
+    },
+    "data_id": 9200007,
+    "duration_s": 172800,
+    "id": "9200007:0:3",
+    "instance": 0,
+    "lane": "lab",
+    "requires": [
+     "9200007:0:2"
+    ],
+    "tags": [
+     "troop"
+    ],
+    "to_level": 3,
+    "value": 48.0
+   },
+   {
+    "__type__": "Task",
+    "category": "troop",
+    "cost": {
+     "elixir": 600
+    },
+    "data_id": 9200008,
+    "duration_s": 86400,
+    "id": "9200008:0:2",
+    "instance": 0,
+    "lane": "lab",
+    "requires": [],
+    "tags": [
+     "troop"
+    ],
+    "to_level": 2,
+    "value": 24.0
+   }
+  ]
+ }
+}

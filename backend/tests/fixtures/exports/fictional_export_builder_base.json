@@ -1,0 +1,26 @@
+{
+  "tag": "#FICTIFOUVR",
+  "timestamp": 1795849200,
+  "buildings": [
+    {"data": 9300001, "lvl": 1},
+    {"data": 9300002, "lvl": 1, "cnt": 2},
+    {"data": 9300003, "lvl": 1},
+    {"data": 9300004, "lvl": 1, "timer": 86400}
+  ],
+  "units": [
+    {"data": 9300005, "lvl": 1}
+  ],
+  "buildings2": [
+    {"data": 9400001, "lvl": 1},
+    {"data": 9400002, "lvl": 1},
+    {"data": 9400003, "lvl": 1},
+    {"data": 9400004, "lvl": 1, "timer": 86400},
+    {"data": 9400005, "lvl": 1, "timer": 172800}
+  ],
+  "units2": [
+    {"data": 9400006, "lvl": 1, "timer": 10800}
+  ],
+  "heroes2": [
+    {"data": 9400007, "lvl": 1, "timer": 259200}
+  ]
+}
