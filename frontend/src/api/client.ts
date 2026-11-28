@@ -44,6 +44,23 @@ export function planBody(body: PlanBody): PlanRequest {
   return body as PlanRequest;
 }
 
+type ManualRequest = NonNullable<
+  paths["/api/villages/{village_id}/manual"]["put"]["requestBody"]
+>["content"]["application/json"];
+type ManualEvent = components["schemas"]["ManualEvent"];
+/**
+ * A `PUT .../manual` body. The server gives an event without `base` the home village, although
+ * the generated type marks `base` required (a field with a default, as in `PlanBody`).
+ */
+export type ManualBody = Omit<ManualRequest, "events"> & {
+  events?: (Omit<ManualEvent, "base"> & Partial<Pick<ManualEvent, "base">>)[];
+};
+
+/** `body` as the typed client expects it; an event left without `base` is the home village's. */
+export function manualBody(body: ManualBody): ManualRequest {
+  return body as ManualRequest;
+}
+
 let client: ReturnType<typeof createClient<paths>> | undefined;
 
 /**

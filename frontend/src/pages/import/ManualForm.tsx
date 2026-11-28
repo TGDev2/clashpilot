@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { type ApiProblem, api, type ManualOut, settle } from "../../api/client";
+import { type ApiProblem, api, type ManualOut, manualBody, settle } from "../../api/client";
 import { useApi } from "../../api/useApi";
 import { ProvenanceBadge } from "../../components/ProvenanceBadge";
 import { Button, inputClass, ProblemAlert, Section, TextAlert } from "../../components/ui";
@@ -27,7 +27,10 @@ type EventDraft = {
   end: string;
   durationCut: string;
   costCut: string;
+  /** The village of a saved event, sent back as it came; absent = the server default (home). */
+  base?: Base;
 };
+type Base = "home" | "builder";
 const EVENT_LANES = ["builder", "lab", "pet_house", "blacksmith"] as const;
 
 type Draft = {
@@ -111,6 +114,7 @@ function draftOf(saved: ManualOut): Draft {
     end: localInput(Number(event.end)),
     durationCut: String(100 - Number(event.duration_pct)),
     costCut: String(100 - Number(event.cost_pct)),
+    ...(event.base === "home" || event.base === "builder" ? { base: event.base as Base } : {}),
   }));
   return draft;
 }
@@ -180,6 +184,7 @@ function bodyOf(draft: Draft, asOf: number) {
       end,
       duration_pct: 100 - durationCut,
       cost_pct: 100 - costCut,
+      ...(event.base !== undefined ? { base: event.base } : {}),
     };
   });
   return {
@@ -326,12 +331,30 @@ export function ManualForm({ villageId }: { villageId: string | null }) {
     const kept = {
       gold_pass: saved?.gold_pass ?? {},
       storage_override: saved?.storage_override ?? {},
+      builder_base_builders: saved?.builder_base_builders ?? null,
     };
+    const shown = new Set<string>(RESOURCES);
+    const keptResources = Object.fromEntries(
+      Object.entries(saved?.resources ?? {})
+        .filter(([name]) => !shown.has(name))
+        .map(([name, typed]) => [
+          name,
+          { value: typed.value, status: typed.status as TypedStatus, as_of: typed.as_of },
+        ]),
+    );
+    const keptRates = Object.fromEntries(
+      Object.entries(saved?.farm_rate ?? {}).filter(([name]) => !shown.has(name)),
+    ) as typeof body.farm_rate;
     setBusy(true);
     const outcome = await settle(() =>
       api().PUT("/api/villages/{village_id}/manual", {
         params: { path: { village_id: villageId } },
-        body: { ...kept, ...body },
+        body: manualBody({
+          ...kept,
+          ...body,
+          resources: { ...keptResources, ...body.resources },
+          farm_rate: { ...keptRates, ...body.farm_rate },
+        }),
       }),
     );
     setBusy(false);

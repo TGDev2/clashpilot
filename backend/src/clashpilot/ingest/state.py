@@ -54,8 +54,18 @@ class VillageSnapshot:
     format_version: str = ""
 
 
-Resource = Literal["gold", "elixir", "dark_elixir", "gems", "shiny_ore", "glowy_ore", "starry_ore"]
-RESOURCES: tuple[Resource, ...] = get_args(Resource)
+HomeResource = Literal[
+    "gold", "elixir", "dark_elixir", "gems", "shiny_ore", "glowy_ore", "starry_ore"
+]
+BuilderResource = Literal["builder_gold", "builder_elixir"]
+Resource = Literal[HomeResource, BuilderResource]
+# The resources of each village: the home ones are those the village state lists.
+RESOURCES: tuple[HomeResource, ...] = get_args(HomeResource)
+BUILDER_RESOURCES: tuple[BuilderResource, ...] = get_args(BuilderResource)
+RESOURCES_OF: dict[Village, frozenset[str]] = {
+    "home": frozenset(RESOURCES),
+    "builder": frozenset(BUILDER_RESOURCES),
+}
 
 
 class _Strict(BaseModel):
@@ -79,7 +89,8 @@ class FarmRate(_Strict):
 
 
 class ManualEvent(_Strict):
-    """A bonus or reduction active on one lane between `start` and `end` (100 = no effect)."""
+    """A bonus or reduction active on one lane of `base` between `start` and `end` (100 = no
+    effect)."""
 
     label: str
     start: int
@@ -87,13 +98,19 @@ class ManualEvent(_Strict):
     lane: str
     duration_pct: int = Field(ge=0)
     cost_pct: int = Field(ge=0)
+    base: Village = "home"
 
 
 class ManualState(_Strict):
-    """What neither the export nor the official API give and the player types in."""
+    """What neither the export nor the official API give and the player types in.
+
+    `builders_total` counts the builders of the home village, `builder_base_builders` those of the
+    builder base; None is unknown, never 0.
+    """
 
     resources: dict[Resource, ManualResource] = Field(default_factory=dict)
     builders_total: int | None = Field(default=None, ge=0)
+    builder_base_builders: int | None = Field(default=None, ge=0)
     magic_items: dict[str, int] = Field(default_factory=dict)
     gold_pass: dict[str, Any] = Field(default_factory=dict)
     farm_rate: dict[Resource, FarmRate] = Field(default_factory=dict)

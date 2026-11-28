@@ -1356,6 +1356,8 @@ export interface components {
         };
         /** ManualOut */
         ManualOut: {
+            /** Builder Base Builders */
+            builder_base_builders: number | null;
             /** Builders Total */
             builders_total: number | null;
             /** Events */
@@ -2222,6 +2224,7 @@ export interface components {
         };
         /** VillageState */
         VillageState: {
+            builder_base_builders: components["schemas"]["Provenance"];
             builders: components["schemas"]["Provenance"];
             /** Exported At */
             exported_at: number;
@@ -2314,9 +2317,16 @@ export interface components {
         };
         /**
          * ManualEvent
-         * @description A bonus or reduction active on one lane between `start` and `end` (100 = no effect).
+         * @description A bonus or reduction active on one lane of `base` between `start` and `end` (100 = no
+         *     effect).
          */
         ManualEvent: {
+            /**
+             * Base
+             * @default home
+             * @enum {string}
+             */
+            base: "home" | "builder";
             /** Cost Pct */
             cost_pct: number;
             /** Duration Pct */
@@ -3078,6 +3088,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** Builder Base Builders */
+                    builder_base_builders?: number | null;
                     /** Builders Total */
                     builders_total?: number | null;
                     /** Events */
