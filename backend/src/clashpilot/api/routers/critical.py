@@ -2,7 +2,8 @@
 
 The village is compiled as `POST .../plans` compiles it (latest export, manual input and events,
 journal, schedule, active pack with its corrections), at the application clock, over 365 days and
-without strategy; `critical_path` judges that problem. Nothing is stored.
+without strategy; `critical_path` judges that problem. Nothing is stored. `?base=` (E32) names the
+village compiled: `home` (default) or `builder`, whose target is its builder hall.
 
 Every predicted date is a provenance object of source `model`; without a town hall task the dates
 are `unknown`. The computation runs in the thread pool.
@@ -20,7 +21,9 @@ from starlette.concurrency import run_in_threadpool
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.forecast import Estimate
 from clashpilot.api.routers.gamedata import ErrorBody
+from clashpilot.api.routers.plans import BaseQuery
 from clashpilot.gamedata.pack import GamePack
+from clashpilot.ingest.state import Village
 from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.critical import (
     CRITICAL_FLOAT_S,
@@ -114,8 +117,8 @@ def _village_not_found(village_id: str) -> ApiError:
     return ApiError(404, "village_not_found", f"Le village {village_id} est introuvable.")
 
 
-def _inputs(request: Request, village_id: str) -> PlanInputs:
-    """The inputs `POST .../plans` reads, with its errors."""
+def _inputs(request: Request, village_id: str, base: Village) -> PlanInputs:
+    """The inputs `POST .../plans` reads for `base`, with its errors."""
     with open_db(_data_dir(request)) as connection:
         found = store.latest_snapshot_row(connection, village_id)
         if found is None:
@@ -128,7 +131,7 @@ def _inputs(request: Request, village_id: str) -> PlanInputs:
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, base),
         )
 
 
@@ -205,11 +208,13 @@ def _document(
     )
 
 
-def _critical_path(request: Request, village_id: str, skip_lanes: list[str]) -> CriticalPathOut:
+def _critical_path(
+    request: Request, village_id: str, skip_lanes: list[str], base: Village
+) -> CriticalPathOut:
     now: int = request.app.state.clock()
-    inputs = _inputs(request, village_id)
+    inputs = _inputs(request, village_id, base)
     try:
-        problem, _ = compile_inputs(inputs, now, HORIZON_DAYS)
+        problem, _ = compile_inputs(inputs, now, HORIZON_DAYS, base=base)
     except MissingInputError as error:
         raise ApiError(
             409,
@@ -236,9 +241,10 @@ async def get_critical_path(
     request: Request,
     village_id: str,
     skip_lanes: Annotated[list[str] | None, Query()] = None,
+    base: BaseQuery = "home",
 ) -> CriticalPathOut:
     """The chains and lanes that fix the date of the next town hall, and the float of each task.
 
     `skip_lanes` (repeatable) names the lanes the town hall does not wait for.
     """
-    return await run_in_threadpool(_critical_path, request, village_id, skip_lanes or [])
+    return await run_in_threadpool(_critical_path, request, village_id, skip_lanes or [], base)

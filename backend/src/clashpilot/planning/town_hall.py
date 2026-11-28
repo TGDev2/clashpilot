@@ -113,7 +113,9 @@ def problems(context: Context, skip_lanes: Sequence[str]) -> Problems:
     params = replace(context.params, town_hall_skip_lanes=tuple(skip_lanes))
     body = context.body
     carried = carried_jobs(body) if context.same_snapshot else {}
-    raw, _ = compile_inputs(context.inputs, int(body["now"]), params.horizon_days, carried)
+    raw, _ = compile_inputs(
+        context.inputs, int(body["now"]), params.horizon_days, carried, base=params.base
+    )
     unknown = unknown_lanes(raw, params.town_hall_skip_lanes)
     if unknown:
         raise UnknownLaneError(unknown)

@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { type ApiProblem, api, type PlanOut, settle } from "../api/client";
+import { type ApiProblem, api, type PlanOut, settle, townHallBody } from "../api/client";
 import type { components } from "../api/schema";
 import { useScheduleZone } from "../api/useZone";
 import { CheckboxInput } from "../components/forms";
@@ -183,7 +183,7 @@ function Comparator({ villageId, plan }: { villageId: string; plan: PlanOut }) {
     const outcome = await settle(() =>
       api().POST("/api/villages/{village_id}/town-hall/compare", {
         params: { path: { village_id: villageId } },
-        body: { skip_lanes: skipLab ? [...others, LAB] : others },
+        body: townHallBody({ skip_lanes: skipLab ? [...others, LAB] : others }),
       }),
     );
     setBusy(false);

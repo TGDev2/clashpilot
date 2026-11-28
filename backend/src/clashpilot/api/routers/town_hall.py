@@ -2,7 +2,8 @@
 
 The comparison runs in the thread pool on copies of the latest plan's problem
 (`planning/town_hall.py`) and writes nothing. Each option is a plan of the engine asked, judged by
-`simulate`; dates are UTC epochs read from those plans.
+`simulate`; dates are UTC epochs read from those plans. `base` (E32, body) names the village of
+the latest plan read: `home` (default) or `builder`.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from clashpilot.api.routers.scenarios import (
     missing_input_error,
     unknown_strategy_error,
 )
+from clashpilot.ingest.state import Village
 from clashpilot.planning import town_hall
 from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.service import (
@@ -38,13 +40,14 @@ router = APIRouter(prefix="/api/villages", tags=["town-hall"])
 
 class TownHallCompareRequest(BaseModel):
     """Without `engine` and `profile`, the defaults of `POST plans` (profile `fast`); without
-    `skip_lanes`, the latest plan's `town_hall_skip_lanes`."""
+    `skip_lanes`, the latest plan's `town_hall_skip_lanes`; without `base`, the main village."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
     engine: str | None = None
     profile: Literal["fast", "repro"] | None = None
     skip_lanes: list[str] | None = None
+    base: Village = "home"
 
 
 class CompositionLeftOut(BaseModel):
@@ -109,7 +112,7 @@ def _compare(
         resolved = resolve_params(None, payload.engine, payload.profile)
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
-    inputs, stored, same_snapshot = base_inputs(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id, payload.base)
     config = planner_config(request.app.state.settings.planner_overrides, resolved.profile)
     context = town_hall.Context(
         inputs=inputs,

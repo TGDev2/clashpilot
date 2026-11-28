@@ -278,7 +278,7 @@ export interface paths {
         };
         /**
          * Get Journal
-         * @description Every recorded event of the village, the most recent first.
+         * @description Every recorded event of the plans of `base`, the most recent first.
          */
         get: operations["get_journal_api_villages__village_id__journal_get"];
         put?: never;
@@ -353,7 +353,8 @@ export interface paths {
         };
         /**
          * Get Calendar
-         * @description One event per assignment of the latest plan, in UTC, with an alarm before its end.
+         * @description One event per assignment of the latest plan of `base`, in UTC, with an alarm before its
+         *     end.
          */
         get: operations["get_calendar_api_villages__village_id__plans_latest_calendar_ics_get"];
         put?: never;
@@ -375,7 +376,7 @@ export interface paths {
         put?: never;
         /**
          * Post Event
-         * @description Record an event on the latest plan and replan (a dry run records nothing).
+         * @description Record an event on the latest plan of `base` and replan (a dry run records nothing).
          */
         post: operations["post_event_api_villages__village_id__plans__plan_id__events_post"];
         delete?: never;
@@ -1567,6 +1568,12 @@ export interface components {
         };
         /** PlanRequest */
         PlanRequest: {
+            /**
+             * Base
+             * @default home
+             * @enum {string}
+             */
+            base: "home" | "builder";
             /** Composition */
             composition?: number[];
             /**
@@ -2134,9 +2141,15 @@ export interface components {
         /**
          * TownHallCompareRequest
          * @description Without `engine` and `profile`, the defaults of `POST plans` (profile `fast`); without
-         *     `skip_lanes`, the latest plan's `town_hall_skip_lanes`.
+         *     `skip_lanes`, the latest plan's `town_hall_skip_lanes`; without `base`, the main village.
          */
         TownHallCompareRequest: {
+            /**
+             * Base
+             * @default home
+             * @enum {string}
+             */
+            base: "home" | "builder";
             /** Engine */
             engine?: string | null;
             /** Profile */
@@ -2700,6 +2713,8 @@ export interface operations {
         parameters: {
             query?: {
                 skip_lanes?: string[] | null;
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
             };
             header?: never;
             path: {
@@ -2998,7 +3013,10 @@ export interface operations {
     };
     get_journal_api_villages__village_id__journal_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
+            };
             header?: never;
             path: {
                 village_id: string;
@@ -3211,7 +3229,10 @@ export interface operations {
     };
     get_latest_plan_api_villages__village_id__plans_latest_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
+            };
             header?: never;
             path: {
                 village_id: string;
@@ -3251,7 +3272,10 @@ export interface operations {
     };
     get_calendar_api_villages__village_id__plans_latest_calendar_ics_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
+            };
             header?: never;
             path: {
                 village_id: string;
@@ -3291,7 +3315,10 @@ export interface operations {
     };
     post_event_api_villages__village_id__plans__plan_id__events_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
+            };
             header?: never;
             path: {
                 village_id: string;
@@ -3354,7 +3381,10 @@ export interface operations {
     };
     get_recommendations_api_villages__village_id__recommendations_now_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The village of the plan: home or builder. */
+                base?: "home" | "builder";
+            };
             header?: never;
             path: {
                 village_id: string;

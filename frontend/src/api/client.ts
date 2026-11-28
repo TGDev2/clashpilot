@@ -30,18 +30,27 @@ export type SchedulePreview = {
 };
 
 type PlanRequest = components["schemas"]["PlanRequest"];
-/** The boolean options of `POST .../plans` that default to false on the server. */
-type PlanFlags = "critical_path" | "composition_first";
+/** The options of `POST .../plans` that take a server default: false, and the home village. */
+type PlanFlags = "critical_path" | "composition_first" | "base";
 /**
  * A `POST .../plans` body. The server gives `critical_path` and `composition_first` their default
- * (false) when they are left out, although the generated type marks them required:
- * openapi-typescript drops the `?` of any field with a default.
+ * (false) and `base` the home village when they are left out, although the generated type marks
+ * them required: openapi-typescript drops the `?` of any field with a default.
  */
 export type PlanBody = Omit<PlanRequest, PlanFlags> & Partial<Pick<PlanRequest, PlanFlags>>;
 
 /** `body` as the typed client expects it; the fields left out take their server defaults. */
 export function planBody(body: PlanBody): PlanRequest {
   return body as PlanRequest;
+}
+
+type TownHallRequest = components["schemas"]["TownHallCompareRequest"];
+/** A `POST .../town-hall/compare` body; `base` left out is the home village (see `PlanBody`). */
+export type TownHallBody = Omit<TownHallRequest, "base"> & Partial<Pick<TownHallRequest, "base">>;
+
+/** `body` as the typed client expects it; without `base`, the home village's latest plan. */
+export function townHallBody(body: TownHallBody): TownHallRequest {
+  return body as TownHallRequest;
 }
 
 type ManualRequest = NonNullable<

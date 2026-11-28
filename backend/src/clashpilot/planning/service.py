@@ -24,6 +24,10 @@ Two more options of ADR-CP5 (E29) work the same way: `town_hall_skip_lanes` (the
 `town_hall_last` does not wait for those lanes, and `critical_path` gives their tasks no float) and
 `composition_first` (`strategies.prioritize_composition`, applied after the criticality, so the
 composition order wins on its lanes while the other lanes keep their criticality).
+
+A plan belongs to one village (E32, ADR-BB3): `PlanParams.base` (`"home"` by default, or
+`"builder"`) is stored with the params, so a replanning, a scenario, a forecast and the town hall
+comparator compile the plan's own village again. `input_hash` covers it when it is `"builder"`.
 """
 
 from __future__ import annotations
@@ -36,8 +40,8 @@ from dataclasses import dataclass
 from typing import Any, Literal, Self
 
 from clashpilot.gamedata.pack import GamePack
-from clashpilot.ingest.state import ManualState, VillageSnapshot
-from clashpilot.planning.compile import compile_problem, running_jobs
+from clashpilot.ingest.state import ManualState, Village, VillageSnapshot
+from clashpilot.planning.compile import HOME, compile_problem, running_jobs
 from clashpilot.planning.critical import prioritize_critical, unknown_lanes
 from clashpilot.planning.explain import consumed_resources, explain_plan, reliability
 from clashpilot.planning.journal import JournalEntry, KnownJob, objective_of, replay
@@ -126,12 +130,13 @@ class PlanParams:
     critical_path: bool = False
     town_hall_skip_lanes: tuple[str, ...] = ()
     composition_first: bool = False
+    base: Village = HOME
 
     @classmethod
     def from_json(cls, document: Mapping[str, Any]) -> Self:
         """The params stored as JSON; a plan stored before E16 has no strategy, before E24 no
         `critical_path` (false), before E29 no `town_hall_skip_lanes` (empty) nor
-        `composition_first` (false)."""
+        `composition_first` (false), before E32 no `base` (home)."""
         goal = document.get("goal")
         return cls(
             horizon_days=int(document["horizon_days"]),
@@ -148,7 +153,15 @@ class PlanParams:
                 str(lane) for lane in document.get("town_hall_skip_lanes", ())
             ),
             composition_first=bool(document.get("composition_first", False)),
+            base=_base(document.get("base", HOME)),
         )
+
+
+def _base(value: Any) -> Village:
+    if value not in ("home", "builder"):
+        raise ValueError(f"unknown base: {value!r}")
+    base: Village = value
+    return base
 
 
 @dataclass(frozen=True)
@@ -178,6 +191,7 @@ def resolve_params(
     critical_path: bool = False,
     town_hall_skip_lanes: Sequence[str] = (),
     composition_first: bool = False,
+    base: Village = HOME,
 ) -> PlanParams:
     """The SPEC defaults: `auto` if registered else `rollout`, profile `fast`, 90 days.
 
@@ -200,6 +214,7 @@ def resolve_params(
         critical_path=critical_path,
         town_hall_skip_lanes=tuple(dict.fromkeys(town_hall_skip_lanes)),
         composition_first=composition_first,
+        base=base,
     )
 
 
@@ -281,6 +296,7 @@ def input_hash(
     critical_path: bool = False,
     town_hall_skip_lanes: Sequence[str] = (),
     composition_first: bool = False,
+    base: Village = HOME,
 ) -> str:
     """The digest of the engine inputs; each plan option counts only when set, so the hashes of
     the plans without it stay what they were."""
@@ -297,6 +313,8 @@ def input_hash(
         document["town_hall_skip_lanes"] = sorted(town_hall_skip_lanes)
     if composition_first:
         document["composition_first"] = True
+    if base != HOME:
+        document["base"] = base
     return hashlib.sha256(canonical_json(document).encode("utf-8")).hexdigest()
 
 
@@ -306,6 +324,7 @@ def hash_options(params: PlanParams) -> dict[str, Any]:
         "critical_path": params.critical_path,
         "town_hall_skip_lanes": params.town_hall_skip_lanes,
         "composition_first": params.composition_first,
+        "base": params.base,
     }
 
 
@@ -368,13 +387,16 @@ def compile_inputs(
     now: int,
     horizon_days: int,
     carried: Mapping[str, tuple[int, int]] | None = None,
+    *,
+    base: Village = HOME,
 ) -> tuple[Problem, dict[str, KnownJob]]:
-    """The problem of the export and the journal at `now`, and every started job known then.
+    """The problem of the village `base` from the export and the journal at `now`, and every
+    started job known then.
 
     `carried` keeps the `(start, lane_slot)` an earlier plan gave the jobs of the export.
     Raises `MissingInputError`.
     """
-    running = running_jobs(inputs.snapshot, inputs.pack, now)
+    running = running_jobs(inputs.snapshot, inputs.pack, now, base)
     state, known = replay(inputs.journal, running, inputs.snapshot.exported_at, carried)
     problem = compile_problem(
         inputs.snapshot,
@@ -384,6 +406,7 @@ def compile_inputs(
         now,
         horizon_days,
         journal=state,
+        base=base,
     )
     return problem, known
 
@@ -397,7 +420,7 @@ def create_plan(
     `compile_problem`), `UnknownLaneError` and `InvalidPlanError`.
     """
     check_goal(inputs.pack, params)
-    compiled, _ = compile_inputs(inputs, now, params.horizon_days)
+    compiled, _ = compile_inputs(inputs, now, params.horizon_days, base=params.base)
     check_lanes(compiled, params)
     problem, weights = with_strategy(compiled, params)
     objective = objective_of(inputs.journal) or weights

@@ -14,6 +14,11 @@ not know is a 422 `unknown_lane`) and `composition_first` (false by default).
 The recommendations also say how critical each start is, and which critical chains or lanes stand
 idle (E25): the latest plan is compiled again at its own `now`, with its strategy, for
 `critical_path`; running jobs and delays are read at the application clock.
+
+A plan belongs to one village (E32): `base` (body of `POST plans`, query of the other routes) is
+`home` (the main village, the default) or `builder` (the builder base). Each route reads the
+latest plan of its base, an event is judged against it, and the journal of a base holds the events
+of its plans: without `base`, every answer is the one of the main village.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.json_schema import SkipJsonSchema
 from starlette.concurrency import run_in_threadpool
@@ -31,7 +36,7 @@ from starlette.concurrency import run_in_threadpool
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.gamedata import ErrorBody
 from clashpilot.gamedata.pack import GamePack
-from clashpilot.ingest.state import Resource
+from clashpilot.ingest.state import Resource, Village
 from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.critical import (
     ChainStopped,
@@ -100,6 +105,7 @@ class PlanRequest(BaseModel):
     critical_path: bool = False
     town_hall_skip_lanes: list[str] = Field(default_factory=list)
     composition_first: bool = False
+    base: Village = "home"
 
 
 class ProofOut(BaseModel):
@@ -430,6 +436,7 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
             critical_path=payload.critical_path,
             town_hall_skip_lanes=payload.town_hall_skip_lanes,
             composition_first=payload.composition_first,
+            base=payload.base,
         )
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
@@ -450,7 +457,7 @@ def _create(request: Request, village_id: str, payload: PlanRequest) -> PlanOut:
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, params.base),
         )
     try:
         outcome = create_plan(inputs, params, overrides, now)
@@ -491,11 +498,14 @@ async def post_plan(
     return await run_in_threadpool(_create, request, village_id, body)
 
 
-def _latest(request: Request, village_id: str) -> store.StoredPlan:
+BaseQuery = Annotated[Village, Query(description="The village of the plan: home or builder.")]
+
+
+def _latest(request: Request, village_id: str, base: Village) -> store.StoredPlan:
     with open_db(_data_dir(request)) as connection:
         if not store.village_exists(connection, village_id):
             raise _village_not_found(village_id)
-        stored = store.latest_plan(connection, village_id)
+        stored = store.latest_plan(connection, village_id, base)
     if stored is None:
         raise _no_plan(village_id)
     return stored
@@ -507,8 +517,8 @@ _READ_ERRORS: dict[int | str, dict[str, Any]] = {
 
 
 @router.get("/{village_id}/plans/latest", response_model=PlanOut, responses=_READ_ERRORS)
-def get_latest_plan(request: Request, village_id: str) -> PlanOut:
-    stored = _latest(request, village_id)
+def get_latest_plan(request: Request, village_id: str, base: BaseQuery = "home") -> PlanOut:
+    stored = _latest(request, village_id, base)
     with open_db(_data_dir(request)) as connection:
         stale = _stale(connection, village_id, stored)
     return PlanOut.model_validate({**stored.body, "stale": stale})
@@ -533,7 +543,7 @@ def _criticality(
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, stored.params.base),
         )
     try:
         problem, _ = compiled(inputs, stored.params, stored.body, stored.snapshot_id == snapshot_id)
@@ -573,14 +583,16 @@ def _alerts(
     response_model=RecommendationsOut,
     responses=_READ_ERRORS,
 )
-def get_recommendations(request: Request, village_id: str) -> RecommendationsOut:
+def get_recommendations(
+    request: Request, village_id: str, base: BaseQuery = "home"
+) -> RecommendationsOut:
     """The actions of the next login of the latest plan, each explained.
 
     `next_login_at` is the earliest planned start not before now; every planned assignment
     starting then is a `start` action. If it is later than now, a `wait` action comes first.
     `critical_alerts` names the critical chains and lanes standing idle now.
     """
-    stored = _latest(request, village_id)
+    stored = _latest(request, village_id, base)
     now: int = request.app.state.clock()
     body = stored.body
     criticality = _criticality(request, village_id, stored)
@@ -656,7 +668,9 @@ def _event(payload: Any, now: int) -> Event:
     )
 
 
-def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> ReplanOut:
+def _replan(
+    request: Request, village_id: str, plan_id: int, payload: Any, base: Village
+) -> ReplanOut:
     now: int = request.app.state.clock()
     overrides = request.app.state.settings.planner_overrides
     with open_db(_data_dir(request)) as connection:
@@ -664,9 +678,16 @@ def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> Re
         if found is None:
             raise _village_not_found(village_id)
         snapshot_id, snapshot = found
-        if not store.plan_exists(connection, village_id, plan_id):
+        plan_base = store.plan_base(connection, village_id, plan_id)
+        if plan_base is None:
             raise ApiError(404, "plan_not_found", f"Le plan {plan_id} est inconnu.")
-        stored = store.latest_plan(connection, village_id)
+        if plan_base != base:
+            raise ApiError(
+                409,
+                "plan_outdated",
+                f"Le plan {plan_id} n'est pas un plan de cette base : précisez base={plan_base}.",
+            )
+        stored = store.latest_plan(connection, village_id, base)
         assert stored is not None
         if stored.plan_id != plan_id:
             raise ApiError(
@@ -686,7 +707,7 @@ def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> Re
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, base),
         )
     previous = PreviousPlan(
         plan_id=stored.plan_id,
@@ -746,10 +767,14 @@ def _replan(request: Request, village_id: str, plan_id: int, payload: Any) -> Re
     },
 )
 async def post_event(
-    request: Request, village_id: str, plan_id: int, payload: EventIn
+    request: Request,
+    village_id: str,
+    plan_id: int,
+    payload: EventIn,
+    base: BaseQuery = "home",
 ) -> ReplanOut:
-    """Record an event on the latest plan and replan (a dry run records nothing)."""
-    return await run_in_threadpool(_replan, request, village_id, plan_id, payload)
+    """Record an event on the latest plan of `base` and replan (a dry run records nothing)."""
+    return await run_in_threadpool(_replan, request, village_id, plan_id, payload, base)
 
 
 @router.get(
@@ -757,12 +782,14 @@ async def post_event(
     response_model=list[JournalEntryOut],
     responses={404: {"model": ErrorBody, "description": "Unknown village (village_not_found)."}},
 )
-def get_journal(request: Request, village_id: str) -> list[JournalEntryOut]:
-    """Every recorded event of the village, the most recent first."""
+def get_journal(
+    request: Request, village_id: str, base: BaseQuery = "home"
+) -> list[JournalEntryOut]:
+    """Every recorded event of the plans of `base`, the most recent first."""
     with open_db(_data_dir(request)) as connection:
         if not store.village_exists(connection, village_id):
             raise _village_not_found(village_id)
-        found = journal_store.entries(connection, village_id)
+        found = journal_store.entries(connection, village_id, base)
     return [
         JournalEntryOut(
             entry_id=row.entry_id,
