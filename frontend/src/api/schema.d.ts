@@ -2144,12 +2144,6 @@ export interface components {
          *     `skip_lanes`, the latest plan's `town_hall_skip_lanes`; without `base`, the main village.
          */
         TownHallCompareRequest: {
-            /**
-             * Base
-             * @default home
-             * @enum {string}
-             */
-            base: "home" | "builder";
             /** Engine */
             engine?: string | null;
             /** Profile */
@@ -2713,8 +2707,6 @@ export interface operations {
         parameters: {
             query?: {
                 skip_lanes?: string[] | null;
-                /** @description The village of the plan: home or builder. */
-                base?: "home" | "builder";
             };
             header?: never;
             path: {

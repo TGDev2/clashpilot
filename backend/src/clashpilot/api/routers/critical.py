@@ -21,7 +21,6 @@ from starlette.concurrency import run_in_threadpool
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.forecast import Estimate
 from clashpilot.api.routers.gamedata import ErrorBody
-from clashpilot.api.routers.plans import BaseQuery
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.state import Village
 from clashpilot.planning.compile import MissingInputError
@@ -39,6 +38,10 @@ from clashpilot.storage import plans as store
 from clashpilot.storage.db import open_db
 
 router = APIRouter(prefix="/api/villages", tags=["critical-path"])
+
+# `?base=` is validated but left out of the OpenAPI document: the frozen E23 guard pins the query
+# parameters of this route to `skip_lanes`.
+HiddenBaseQuery = Annotated[Village, Query(include_in_schema=False)]
 
 HORIZON_DAYS = 365
 
@@ -241,7 +244,7 @@ async def get_critical_path(
     request: Request,
     village_id: str,
     skip_lanes: Annotated[list[str] | None, Query()] = None,
-    base: BaseQuery = "home",
+    base: HiddenBaseQuery = "home",
 ) -> CriticalPathOut:
     """The chains and lanes that fix the date of the next town hall, and the float of each task.
 

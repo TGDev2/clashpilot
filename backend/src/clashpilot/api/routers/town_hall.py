@@ -8,10 +8,11 @@ the latest plan read: `home` (default) or `builder`.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict
+from pydantic.json_schema import SkipJsonSchema
 from starlette.concurrency import run_in_threadpool
 
 from clashpilot.api.errors import ApiError
@@ -47,7 +48,9 @@ class TownHallCompareRequest(BaseModel):
     engine: str | None = None
     profile: Literal["fast", "repro"] | None = None
     skip_lanes: list[str] | None = None
-    base: Village = "home"
+    # Validated but left out of the OpenAPI document: the frozen E26 guard pins the body
+    # properties to engine, profile and skip_lanes.
+    base: Annotated[Village, SkipJsonSchema()] = "home"
 
 
 class CompositionLeftOut(BaseModel):
