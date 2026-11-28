@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { type ApiProblem, api, type ReplanOut, settle } from "../../api/client";
 import { fr } from "../../i18n/fr";
+import { useVillage } from "../../state/village";
 import { Button, inputClass, ProblemAlert } from "../ui";
 import { sendEvent } from "./events";
 
@@ -23,6 +24,7 @@ export function LaunchDialog({
   onClose: () => void;
   onApplied: (report: ReplanOut) => void;
 }) {
+  const { base } = useVillage();
   const fieldId = useId();
   const titleId = useId();
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -62,6 +64,7 @@ export function LaunchDialog({
     }
     const outcome = await sendEvent(
       villageId,
+      base,
       planId,
       { type: "task_started", task_id: taskId, at: converted.data.epoch },
       false,

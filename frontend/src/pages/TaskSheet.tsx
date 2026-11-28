@@ -6,6 +6,7 @@ import { PlanGate } from "../components/PlanGate";
 import { fr } from "../i18n/fr";
 import { formatInZone } from "../lib/format";
 import { safeZone } from "../lib/time";
+import { useLabels } from "../state/village";
 
 const linkClass = "text-signal underline underline-offset-2";
 
@@ -58,6 +59,7 @@ function TaskLinks({
 }
 
 function TaskView({ plan, taskId }: { plan: PlanOut; taskId: string }) {
+  const { lanes } = useLabels();
   const task = plan.assignments.find((a) => a.task_id === taskId);
   if (task === undefined) {
     return (
@@ -74,7 +76,7 @@ function TaskView({ plan, taskId }: { plan: PlanOut; taskId: string }) {
     .filter((a: AssignmentOut) => a.requires.includes(task.task_id))
     .map((a) => a.task_id);
   const facts = [
-    [fr.task.lane, laneLabel(task.lane, task.lane_slot)],
+    [fr.task.lane, laneLabel(task.lane, task.lane_slot, lanes)],
     [fr.task.status, statusLabel(task.status)],
     [fr.task.start, formatInZone(task.start, timezone)],
     [fr.task.end, formatInZone(task.end, timezone)],

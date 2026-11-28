@@ -53,7 +53,7 @@ function ProvenanceNote({ provenance }: { provenance: Provenance }) {
 }
 
 export function Dashboard() {
-  const { villageId } = useVillage();
+  const { villageId, base } = useVillage();
   const now = useNow();
   const packs = useApi(() => settle(() => api().GET("/api/gamedata/packs")), "packs");
   const state = useApi(
@@ -67,7 +67,7 @@ export function Dashboard() {
   );
 
   // The plan is optional here: no plan or a failed read shows no indicator, nothing else.
-  const plan = useLatestPlan(villageId);
+  const plan = useLatestPlan(villageId, base);
   const activePack = packs.data?.find((pack) => pack.active);
   const village = state.data;
   const itemKeys = uniqueKeys(

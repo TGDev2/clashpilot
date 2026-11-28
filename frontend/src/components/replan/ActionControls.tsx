@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import type { ActionOut, ApiProblem, ReplanOut } from "../../api/client";
 import { fr } from "../../i18n/fr";
 import { localDateTimeValue, safeZone } from "../../lib/time";
+import { useVillage } from "../../state/village";
 import { Button, inputClass, ProblemAlert } from "../ui";
 import { ChangesPanel } from "./ChangesPanel";
 import { type ReplanEvent, sendEvent } from "./events";
@@ -29,6 +30,7 @@ export function ActionControls({
   timezone: string;
   onApplied: (report: ReplanOut) => void;
 }) {
+  const { base } = useVillage();
   const freeId = useId();
   const [launching, setLaunching] = useState(false);
   const [choosing, setChoosing] = useState(false);
@@ -49,7 +51,7 @@ export function ActionControls({
     };
     setBusy(true);
     setProblem(undefined);
-    const outcome = await sendEvent(villageId, planId, event, true);
+    const outcome = await sendEvent(villageId, base, planId, event, true);
     setBusy(false);
     if (outcome.ok) {
       setSimulation({ event, report: outcome.data });
@@ -65,7 +67,7 @@ export function ActionControls({
     }
     setBusy(true);
     setProblem(undefined);
-    const outcome = await sendEvent(villageId, planId, simulation.event, false);
+    const outcome = await sendEvent(villageId, base, planId, simulation.event, false);
     setBusy(false);
     if (outcome.ok) {
       onApplied(outcome.data);

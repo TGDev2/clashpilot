@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ApiProblem } from "../../api/client";
 import { fr } from "../../i18n/fr";
+import { useVillage } from "../../state/village";
 import { Banner, Button, ProblemAlert } from "../ui";
 import { sendEvent } from "./events";
 
@@ -14,13 +15,14 @@ export function StaleBanner({
   planId: number;
   onReplanned: () => void;
 }) {
+  const { base } = useVillage();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ApiProblem | undefined>();
 
   async function replan() {
     setBusy(true);
     setProblem(undefined);
-    const outcome = await sendEvent(villageId, planId, { type: "snapshot_imported" }, false);
+    const outcome = await sendEvent(villageId, base, planId, { type: "snapshot_imported" }, false);
     setBusy(false);
     if (outcome.ok) {
       onReplanned();

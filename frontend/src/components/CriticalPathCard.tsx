@@ -1,19 +1,22 @@
-import { api, type CriticalPathOut, type EstimateOut, settle } from "../api/client";
+import { api, baseParams, type CriticalPathOut, type EstimateOut, settle } from "../api/client";
 import { useApi } from "../api/useApi";
 import { useScheduleZone } from "../api/useZone";
 import { fr } from "../i18n/fr";
 import { formatDuration, formatInZone, laneSubject } from "../lib/format";
+import { useLabels, useVillage } from "../state/village";
 import { ProblemNotice } from "./ProblemNotice";
 import { ProvenanceBadge } from "./ProvenanceBadge";
 import { Section, Tag } from "./ui";
 
+type Labels = ReturnType<typeof useLabels>["criticalPath"];
+
 /** The name of a lane, the lane key itself when it has none. */
-function laneName(lane: string): string {
-  return (fr.criticalPath.laneName as Record<string, string>)[lane] ?? lane;
+function laneName(lane: string, labels: Labels): string {
+  return (labels.laneName as Record<string, string>)[lane] ?? lane;
 }
 
 /** What fixes the date: the longest chains, or the work left on one lane. */
-function cause(path: CriticalPathOut): string | undefined {
+function cause(path: CriticalPathOut, labels: Labels): string | undefined {
   const bound = path.bound;
   if (bound === null) {
     return undefined;
@@ -22,7 +25,7 @@ function cause(path: CriticalPathOut): string | undefined {
     return path.chains.map((chain) => chain.name).join(", ") || undefined;
   }
   const lane = bound.lane ?? "";
-  const subject = laneSubject(lane);
+  const subject = laneSubject(lane, labels.laneSubject);
   const work = path.work_finish.find((entry) => entry.lane === lane);
   return work === undefined ? subject : `${subject} (${formatDuration(work.work_s)})`;
 }
@@ -37,16 +40,17 @@ function dateText(estimate: EstimateOut, zone: string) {
 }
 
 function PathDetails({ path, zone }: { path: CriticalPathOut; zone: string }) {
+  const t = useLabels();
   if (path.target === null) {
-    return <p className="text-mist">{fr.criticalPath.noTarget}</p>;
+    return <p className="text-mist">{t.criticalPath.noTarget}</p>;
   }
-  const fixedBy = cause(path);
+  const fixedBy = cause(path, t.criticalPath);
   return (
     <>
       <div className="space-y-2">
         <p data-date="parallel">
           <span className="block text-sm text-mist">
-            {fr.criticalPath.earliest(path.target.to_level)}
+            {t.criticalPath.earliest(path.target.to_level)}
           </span>{" "}
           <span className="block font-display text-3xl text-bone tabular-nums sm:text-4xl">
             {dateText(path.finish_parallel, zone)}
@@ -56,7 +60,7 @@ function PathDetails({ path, zone }: { path: CriticalPathOut; zone: string }) {
           <ProvenanceBadge status={path.finish_parallel.status} />
         )}{" "}
         <p data-date="after" className="text-sm text-mist">
-          {fr.criticalPath.after}{" "}
+          {t.criticalPath.after}{" "}
           <span className="font-mono text-bone tabular-nums">
             {dateText(path.finish_after, zone)}
           </span>
@@ -96,7 +100,7 @@ function PathDetails({ path, zone }: { path: CriticalPathOut; zone: string }) {
                 data-lane-work={entry.lane}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line/60 py-2 text-sm last:border-b-0"
               >
-                <span className="text-bone">{laneName(entry.lane)}</span>{" "}
+                <span className="text-bone">{laneName(entry.lane, t.criticalPath)}</span>{" "}
                 <span className="font-mono text-mist tabular-nums">
                   {entry.finish.value === null ? (
                     <ProvenanceBadge status="unknown" />
@@ -130,22 +134,27 @@ export function CriticalPathCard({
   skipLanes: readonly string[];
   ready: boolean;
 }) {
+  const { base } = useVillage();
+  const t = useLabels();
   const zone = useScheduleZone(villageId);
   const path = useApi<CriticalPathOut>(
     () =>
       settle(() =>
         api().GET("/api/villages/{village_id}/critical-path", {
-          params: { path: { village_id: villageId }, query: { skip_lanes: [...skipLanes] } },
+          params: {
+            path: { village_id: villageId },
+            query: { skip_lanes: [...skipLanes], ...baseParams(base) },
+          },
         }),
       ),
-    ready ? `${villageId}:${skipLanes.join(",")}` : null,
+    ready ? `${villageId}:${base}:${skipLanes.join(",")}` : null,
   );
   return (
     <div data-critical-path="">
-      <Section title={fr.criticalPath.title}>
+      <Section title={t.criticalPath.title}>
         {/* It qualifies every date below, so it is read first. */}
         {skipLanes.includes("lab") && (
-          <p className="text-sm text-signal">{fr.criticalPath.labSkipped}</p>
+          <p className="text-sm text-signal">{t.criticalPath.labSkipped}</p>
         )}{" "}
         <ProblemNotice problem={path.problem} />
         {path.data !== undefined ? (

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-aria-components";
-import { type ApiProblem, api, type PlanBody, planBody, settle } from "../api/client";
+import { type ApiProblem, api, baseParams, type PlanBody, planBody, settle } from "../api/client";
 import { useApi } from "../api/useApi";
 import { CheckboxInput, TextInput } from "../components/forms";
 import { ProblemNotice } from "../components/ProblemNotice";
 import { Button, PageTitle, Section, TextAlert } from "../components/ui";
 import { fr } from "../i18n/fr";
-import { useVillage } from "../state/village";
+import { useLabels, useVillage } from "../state/village";
+import { Troops } from "./strategy/Troops";
 
 const CUSTOM_GOAL = "custom_goal";
 
@@ -23,7 +24,8 @@ function positiveInteger(text: string): number | undefined {
 
 /** Choose a progression strategy, a composition and, for `custom_goal`, a goal; compute the plan. */
 export function Strategy() {
-  const { villageId } = useVillage();
+  const { villageId, base } = useVillage();
+  const t = useLabels();
   const strategies = useApi(() => settle(() => api().GET("/api/meta/strategies")), "strategies");
   const [chosen, setChosen] = useState<string | undefined>();
   const [composition, setComposition] = useState("");
@@ -47,7 +49,7 @@ export function Strategy() {
     setProblem(undefined);
     setLocalError(undefined);
     // An option left unchecked sends no key: the server's default applies.
-    const body: PlanBody = {};
+    const body: PlanBody = baseParams(base);
     if (chosen !== undefined) {
       body.strategy = chosen;
     }
@@ -121,7 +123,7 @@ export function Strategy() {
                   onChange={() => setChosen(strategy.key)}
                   className="accent-signal"
                 />
-                {strategy.label}
+                {(t.strategy.labels as Record<string, string>)[strategy.key] ?? strategy.label}
               </label>
             ))}
           </div>
@@ -134,12 +136,13 @@ export function Strategy() {
             onChange={setComposition}
           />
           <CheckboxInput
-            label={fr.strategy.compositionFirst}
+            label={t.strategy.compositionFirst}
             checked={compositionFirst && hasUnits}
             onChange={setCompositionFirst}
             disabled={!hasUnits}
-            hint={hasUnits ? undefined : fr.strategy.compositionFirstHint}
+            hint={hasUnits ? undefined : t.strategy.compositionFirstHint}
           />
+          {villageId !== null && <Troops villageId={villageId} />}
           {chosen === CUSTOM_GOAL && (
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput
@@ -159,13 +162,13 @@ export function Strategy() {
             </div>
           )}
         </Section>
-        <Section title={fr.strategy.townHallTitle}>
+        <Section title={t.strategy.townHallTitle}>
           <CheckboxInput
-            label={fr.strategy.criticalPath}
+            label={t.strategy.criticalPath}
             checked={criticalPath}
             onChange={setCriticalPath}
           />
-          <CheckboxInput label={fr.strategy.skipLab} checked={skipLab} onChange={setSkipLab} />
+          <CheckboxInput label={t.strategy.skipLab} checked={skipLab} onChange={setSkipLab} />
         </Section>
         <div className="space-y-3">
           <Button onPress={() => void compute()} isDisabled={busy || villageId === null}>

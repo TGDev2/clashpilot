@@ -26,7 +26,8 @@ export function ReminderAnnouncer() {
   const raw = useSyncExternalStore(subscribeReminderSettings, rawReminderSettings);
   const settings = useMemo(() => parseReminderSettings(raw), [raw]);
   // Nothing is read from the server while the reminders are off.
-  const plan = useLatestPlan(settings.enabled ? villageId : null, pathname).data;
+  // The reminders stay those of the home village, whatever base the pages show.
+  const plan = useLatestPlan(settings.enabled ? villageId : null, "home", pathname).data;
   const [shown, setShown] = useState<Reminder[]>([]);
   const reminded = useRef(new Set<string>());
 

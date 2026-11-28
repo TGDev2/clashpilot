@@ -10,6 +10,12 @@ export const fr = {
     fanContentPolicy:
       "This material is unofficial and is not endorsed by Supercell. For more information see Supercell's Fan Content Policy: www.supercell.com/fan-content-policy.",
   },
+  village: {
+    selector: "Village affiché",
+    home: "Village principal",
+    builder: "Base des ouvriers",
+    homeOnly: "Disponible pour le village principal seulement",
+  },
   nav: {
     dashboard: "Tableau de bord",
     import: "Importer",
@@ -47,6 +53,9 @@ export const fr = {
     skipLab: "L'Hôtel de Ville n'attend pas le laboratoire",
     compositionFirst: "Laboratoire : ma composition d'abord",
     compositionFirstHint: "Choisis d'abord tes troupes et tes sorts",
+    troops: "Troupes du village et leurs identifiants",
+    // Names that replace those of the API, by strategy key: none for the home village.
+    labels: {},
   },
   criticalPath: {
     title: "Prochain Hôtel de Ville",
@@ -249,6 +258,8 @@ export const fr = {
     shiny_ore: "Minerai brillant",
     glowy_ore: "Minerai luisant",
     starry_ore: "Minerai étoilé",
+    builder_gold: "Or des ouvriers",
+    builder_elixir: "Élixir des ouvriers",
   },
   common: {
     unknownValue: "Valeur inconnue",
@@ -341,6 +352,8 @@ export const fr = {
     farmExpected: "attendu",
     farmHigh: "haut",
     builders: "Nombre de constructeurs",
+    builderBaseBuilders: "Ouvriers de la base",
+    eventVillage: "Village de l'événement",
     magicItems: "Objets magiques",
     itemName: "Nom de l'objet",
     quantity: "Quantité",
@@ -594,4 +607,50 @@ export const fr = {
     back: "Retour aux constructeurs",
     gameData: "Données de jeu de cette amélioration",
   },
+} as const;
+
+/**
+ * The labels of the builder base: the same as `fr`, except where they name the town hall or the
+ * laboratory, which are the "Hôtel des ouvriers" and the "Labo des étoiles" there.
+ */
+export const frBuilder = {
+  ...fr,
+  nav: { ...fr.nav, townHall: "Lancer l'Hôtel des ouvriers" },
+  criticalPath: {
+    ...fr.criticalPath,
+    title: "Prochain Hôtel des ouvriers",
+    earliest: (level: number) => `Hôtel des ouvriers ${level} au plus tôt :`,
+    after: "Si l'Hôtel des ouvriers attend tout le reste :",
+    laneName: { ...fr.criticalPath.laneName, lab: "Labo des étoiles" },
+    laneSubject: { ...fr.criticalPath.laneSubject, lab: "le labo des étoiles" },
+    noTarget: "Aucun Hôtel des ouvriers à améliorer",
+    labSkipped: "Le labo des étoiles n'est pas attendu",
+  },
+  townHall: {
+    ...fr.townHall,
+    title: "Quand lancer l'Hôtel des ouvriers ?",
+    result: (level: number) => `Hôtel des ouvriers ${level} : les moments de lancement`,
+    labLeft: (count: number, duration: string) =>
+      `${count} ${count === 1 ? "recherche" : "recherches"}, ${duration} de labo des étoiles`,
+  },
+  strategy: {
+    ...fr.strategy,
+    townHallTitle: "Hôtel des ouvriers",
+    criticalPath: "Viser la date de l'Hôtel des ouvriers au plus tôt",
+    skipLab: "L'Hôtel des ouvriers n'attend pas le labo des étoiles",
+    compositionFirst: "Labo des étoiles : ma composition d'abord",
+    // The builder base has no spells.
+    compositionFirstHint: "Choisis d'abord tes troupes",
+    labels: {
+      th_rush: "Course à l'Hôtel des ouvriers",
+      finish_th: "Finir l'Hôtel des ouvriers",
+    },
+  },
+  now: {
+    ...fr.now,
+    stopped: (subject: string, plural: boolean) =>
+      `${subject} ${plural ? "sont" : "est"} à l'arrêt : chaque heure d'arrêt retarde ton Hôtel des ouvriers`,
+  },
+  lanes: { ...fr.lanes, lab: "Labo des étoiles" },
+  manual: { ...fr.manual, lanes: { ...fr.manual.lanes, lab: "Labo des étoiles" } },
 } as const;

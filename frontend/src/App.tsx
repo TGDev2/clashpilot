@@ -2,6 +2,7 @@ import { type ReactNode, useEffect } from "react";
 import { RouterProvider } from "react-aria-components";
 import { BrowserRouter, Route, Routes, useHref, useNavigate } from "react-router";
 import { Layout } from "./components/Layout";
+import { HomeOnly, PerBase } from "./components/VillagePages";
 import { fr } from "./i18n/fr";
 import { Calendar } from "./pages/Calendar";
 import { Dashboard } from "./pages/Dashboard";
@@ -40,19 +41,96 @@ export function App() {
         <VillageProvider>
           <Routes>
             <Route element={<Layout />}>
-              <Route index element={<Dashboard />} />
+              <Route
+                index
+                element={
+                  <PerBase>
+                    <Dashboard />
+                  </PerBase>
+                }
+              />
               <Route path="importer" element={<Import />} />
-              <Route path="maintenant" element={<NowPage />} />
-              <Route path="historique" element={<History />} />
+              <Route
+                path="maintenant"
+                element={
+                  <PerBase>
+                    <NowPage />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="historique"
+                element={
+                  <PerBase>
+                    <History />
+                  </PerBase>
+                }
+              />
               <Route path="reglages" element={<Settings />} />
-              <Route path="calendrier" element={<Calendar />} />
-              <Route path="constructeurs" element={<Gantt />} />
-              <Route path="taches/:taskId" element={<TaskSheet />} />
-              <Route path="strategie" element={<Strategy />} />
-              <Route path="hdv" element={<TownHall />} />
-              <Route path="ressources" element={<Resources />} />
-              <Route path="scenarios" element={<Scenarios />} />
-              <Route path="objets" element={<MagicItems />} />
+              <Route
+                path="calendrier"
+                element={
+                  <PerBase>
+                    <Calendar />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="constructeurs"
+                element={
+                  <PerBase>
+                    <Gantt />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="taches/:taskId"
+                element={
+                  <PerBase>
+                    <TaskSheet />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="strategie"
+                element={
+                  <PerBase>
+                    <Strategy />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="hdv"
+                element={
+                  <PerBase>
+                    <TownHall />
+                  </PerBase>
+                }
+              />
+              <Route
+                path="ressources"
+                element={
+                  <HomeOnly title={fr.forecast.title}>
+                    <Resources />
+                  </HomeOnly>
+                }
+              />
+              <Route
+                path="scenarios"
+                element={
+                  <HomeOnly title={fr.scenarios.title}>
+                    <Scenarios />
+                  </HomeOnly>
+                }
+              />
+              <Route
+                path="objets"
+                element={
+                  <HomeOnly title={fr.magic.title}>
+                    <MagicItems />
+                  </HomeOnly>
+                }
+              />
               <Route path="donnees/:packId/:dataId" element={<ItemLevelsPage />} />
               <Route path="donnees/:packId/:dataId/:level" element={<LevelSheet />} />
               <Route path="*" element={<Placeholder title={fr.nav.dashboard} />} />
