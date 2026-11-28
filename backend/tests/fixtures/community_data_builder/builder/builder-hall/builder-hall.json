@@ -1,0 +1,52 @@
+{
+  "id": "builder-hall",
+  "dataId": 7700001,
+  "name": "Manoir d'essai",
+  "base": "builder",
+  "category": "builder-hall",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 0,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "images": {
+        "normal": "https://example.invalid/builder-hall-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 3100,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 1,
+        "minutes": 5,
+        "seconds": 0
+      },
+      "images": {
+        "normal": "https://example.invalid/builder-hall-2.png"
+      }
+    },
+    {
+      "level": 3,
+      "buildCost": 21000,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 1,
+        "hours": 2,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "images": {
+        "normal": "https://example.invalid/builder-hall-3.png"
+      }
+    }
+  ]
+}
