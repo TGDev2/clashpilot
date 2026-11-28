@@ -1,0 +1,48 @@
+{
+  "id": "town-hall",
+  "dataId": 7600001,
+  "name": "Beffroi d'essai",
+  "base": "home",
+  "category": "town-hall",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 120,
+      "buildCostResource": "Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 30
+      },
+      "storageCapacity": {
+        "gold": 1200,
+        "elixir": 1300,
+        "darkElixir": 0
+      },
+      "images": {
+        "normal": "https://example.invalid/town-hall-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 1400,
+      "buildCostResource": "Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 20,
+        "seconds": 0
+      },
+      "storageCapacity": {
+        "gold": 2400,
+        "elixir": 2600,
+        "darkElixir": 0
+      },
+      "images": {
+        "normal": "https://example.invalid/town-hall-2.png"
+      }
+    }
+  ]
+}

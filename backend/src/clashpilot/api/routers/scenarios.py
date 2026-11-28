@@ -22,6 +22,7 @@ from starlette.concurrency import run_in_threadpool
 from clashpilot.api.errors import ApiError
 from clashpilot.api.routers.gamedata import ErrorBody
 from clashpilot.api.routers.plans import AssignmentOut, ProofOut
+from clashpilot.ingest.state import Village
 from clashpilot.planning.compile import MissingInputError
 from clashpilot.planning.model import PolicyMode
 from clashpilot.planning.scenarios import plan_figures, run_scenario
@@ -232,14 +233,18 @@ def missing_input_error(error: MissingInputError) -> ApiError:
     )
 
 
-def base_inputs(request: Request, village_id: str) -> tuple[PlanInputs, store.StoredPlan, bool]:
-    """The inputs of the village and its latest plan, and whether it is on the latest export."""
+def base_inputs(
+    request: Request, village_id: str, base: Village = "home"
+) -> tuple[PlanInputs, store.StoredPlan, bool]:
+    """The inputs of the village and its latest plan of `base` (the main village by default: the
+    scenarios, the forecast and the item advisor stay there, E32), and whether that plan is on the
+    latest export."""
     with open_db(_data_dir(request)) as connection:
         found = store.latest_snapshot_row(connection, village_id)
         if found is None:
             raise _village_not_found(village_id)
         snapshot_id, snapshot = found
-        stored = store.latest_plan(connection, village_id)
+        stored = store.latest_plan(connection, village_id, base)
         if stored is None:
             raise ApiError(404, "no_plan", f"Aucun plan n'a encore été calculé pour {village_id}.")
         pack = store.active_pack(connection)
@@ -250,7 +255,7 @@ def base_inputs(request: Request, village_id: str) -> tuple[PlanInputs, store.St
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, base),
         )
     return inputs, stored, stored.snapshot_id == snapshot_id
 
@@ -289,7 +294,7 @@ def _create(request: Request, village_id: str, payload: ScenarioRequest) -> Scen
         if isinstance(overlay, StrategyIn) and overlay.key not in strategies:
             raise unknown_strategy_error(overlay.key)
     overlays = [overlay.model_dump() for overlay in payload.overlays]
-    inputs, stored, same_snapshot = base_inputs(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id, "home")
     config = planner_config(request.app.state.settings.planner_overrides, resolved.profile)
     try:
         document = run_scenario(
@@ -353,7 +358,7 @@ def delete_scenario(request: Request, village_id: str, scenario_id: int) -> Resp
 
 
 def _compare(request: Request, village_id: str, payload: CompareRequest) -> CompareOut:
-    inputs, stored, same_snapshot = base_inputs(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id, "home")
     with open_db(_data_dir(request)) as connection:
         chosen = []
         for scenario_id in payload.scenario_ids:

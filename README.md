@@ -45,9 +45,12 @@ backend/.venv/Scripts/python -m clashpilot.gamedata.builder \
   --as-of 2026-11-01 --retrieved-at 2026-11-11
 ```
 
-(sous Linux ou macOS : `backend/.venv/bin/python`). L'outil ne touche pas au réseau. Un niveau
-illisible n'est jamais deviné : il est écarté du pack et signalé. Importez ensuite `pack.json` dans
-la page **Importer**, section « Données de jeu », puis activez-le. Un pack ne doit pas dépasser 5 Mo.
+(sous Linux ou macOS : `backend/.venv/bin/python`). L'outil ne touche pas au réseau. La base des
+ouvriers est incluse : le pack contient le village principal (dossier `home`) et, quand il est
+présent, le dossier `builder`, avec l'or et l'élixir des ouvriers. Un niveau illisible (par exemple
+payable « en or ou en élixir » des ouvriers) n'est jamais deviné : il est écarté du pack et signalé.
+Importez ensuite `pack.json` dans la page **Importer**, section « Données de jeu », puis activez-le.
+Un pack ne doit pas dépasser 5 Mo.
 
 ## Importer un village
 

@@ -550,7 +550,7 @@ def forecast_plan(
     weights: Objective | None = None
     for scenario in SCENARIOS:
         variant = replace(inputs, manual=_with_income(inputs.manual, scenario))
-        compiled, _ = compile_inputs(variant, now, params.horizon_days, carried)
+        compiled, _ = compile_inputs(variant, now, params.horizon_days, carried, base=params.base)
         problem, objective = with_strategy(compiled, params)
         problems[scenario] = replace(problem, horizon_end=now + horizon_days * DAY_S)
         if scenario == "expected":

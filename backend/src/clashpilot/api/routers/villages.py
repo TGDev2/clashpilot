@@ -20,6 +20,7 @@ from clashpilot.ingest.diff import diff_snapshots
 from clashpilot.ingest.export import ImportFormatError, parse_export
 from clashpilot.ingest.official_api import CocApiError, fetch_player, match_levels
 from clashpilot.ingest.state import RESOURCES, ManualState, SnapshotItem, VillageSnapshot
+from clashpilot.planning.compile import builder_base_estimate
 from clashpilot.storage.db import open_db
 from clashpilot.storage.history import add_manual_history
 from clashpilot.storage.packs import load_effective_pack
@@ -72,6 +73,7 @@ class VillageState(BaseModel):
     warnings: list[str]
     resources: dict[str, Provenance]
     builders: Provenance
+    builder_base_builders: Provenance
 
 
 def _data_dir(request: Request) -> Path:
@@ -132,6 +134,28 @@ def _builders(snapshot: VillageSnapshot, pack: GamePack | None, extras: _Extras)
     return Provenance(value=None, status="unknown", source="model", as_of=None)
 
 
+def _builder_base_builders(
+    snapshot: VillageSnapshot, pack: GamePack | None, extras: _Extras
+) -> Provenance:
+    """Typed-in count, else estimated from the builder base jobs of the export (at least 1),
+    else unknown without an active pack to place them on a lane."""
+    if extras.manual.builder_base_builders is not None:
+        return Provenance(
+            value=extras.manual.builder_base_builders,
+            status="confirmed",
+            source="manual",
+            as_of=extras.manual_at,
+        )
+    if pack is None:
+        return Provenance(value=None, status="unknown", source="model", as_of=None)
+    return Provenance(
+        value=builder_base_estimate(snapshot, pack),
+        status="estimated",
+        source="model",
+        as_of=snapshot.exported_at,
+    )
+
+
 def _resources(extras: _Extras) -> dict[str, Provenance]:
     out: dict[str, Provenance] = {}
     for name in RESOURCES:
@@ -183,6 +207,7 @@ def _state(
         items=[item_out(item) for item in snapshot.items],
         resources=_resources(extras),
         builders=_builders(snapshot, pack, extras),
+        builder_base_builders=_builder_base_builders(snapshot, pack, extras),
         running=[
             RunningJobOut(
                 data_id=job.data_id,
@@ -570,6 +595,7 @@ class ManualOut(BaseModel):
     village_id: str
     resources: dict[str, ManualResourceOut]
     builders_total: int | None
+    builder_base_builders: int | None
     magic_items: dict[str, int]
     gold_pass: dict[str, Any]
     farm_rate: dict[str, dict[str, int]]
@@ -587,6 +613,7 @@ def _manual_out(village_id: str, manual: ManualState, updated_at: int | None) ->
             for name, r in manual.resources.items()
         },
         builders_total=manual.builders_total,
+        builder_base_builders=manual.builder_base_builders,
         magic_items=manual.magic_items,
         gold_pass=manual.gold_pass,
         farm_rate={name: rate.model_dump() for name, rate in manual.farm_rate.items()},

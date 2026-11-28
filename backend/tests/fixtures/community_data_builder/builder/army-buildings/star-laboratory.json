@@ -1,0 +1,69 @@
+{
+  "id": "star-laboratory",
+  "dataId": 7700002,
+  "name": "Observatoire d'essai",
+  "base": "builder",
+  "category": "army",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerBuilderHall": [
+    {
+      "builderHallLevel": 1,
+      "count": 1
+    },
+    {
+      "builderHallLevel": 2,
+      "count": 1
+    },
+    {
+      "builderHallLevel": 3,
+      "count": 1
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 410,
+      "buildCostResource": "Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 1,
+        "seconds": 0
+      },
+      "builderHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/star-laboratory-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 4200,
+      "buildCostResource": "Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 40,
+        "seconds": 0
+      },
+      "builderHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/star-laboratory-2.png"
+      }
+    },
+    {
+      "level": 3,
+      "buildCost": 43000,
+      "buildCostResource": "Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 6,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 3,
+      "images": {
+        "normal": "https://example.invalid/star-laboratory-3.png"
+      }
+    }
+  ]
+}

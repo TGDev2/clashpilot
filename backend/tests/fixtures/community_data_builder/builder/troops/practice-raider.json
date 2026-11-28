@@ -1,0 +1,40 @@
+{
+  "id": "practice-raider",
+  "dataId": 7700011,
+  "name": "Maraudeur d'essai",
+  "base": "builder",
+  "category": "troop",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "levels": [
+    {
+      "level": 2,
+      "researchCost": 810,
+      "researchCostResource": "Builder Elixir",
+      "researchTime": {
+        "days": 0,
+        "hours": 3,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "starLabRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/practice-raider-2.png"
+      }
+    },
+    {
+      "level": 3,
+      "researchCost": 8100,
+      "researchCostResource": "Builder Elixir",
+      "researchTime": {
+        "days": 0,
+        "hours": 12,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "starLabRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/practice-raider-3.png"
+      }
+    }
+  ]
+}

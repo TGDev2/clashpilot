@@ -1,0 +1,31 @@
+{
+  "id": "practice-clock",
+  "dataId": 7700004,
+  "name": "Horloge d'essai",
+  "base": "builder",
+  "category": "other",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerBuilderHall": [
+    {
+      "builderHallLevel": 2,
+      "count": 1
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 620,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 10,
+        "seconds": 0
+      },
+      "builderHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/practice-clock-1.png"
+      }
+    }
+  ]
+}

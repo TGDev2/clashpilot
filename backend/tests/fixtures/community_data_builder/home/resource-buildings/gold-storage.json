@@ -1,0 +1,52 @@
+{
+  "id": "gold-storage",
+  "dataId": 7600003,
+  "name": "Cassette d'essai",
+  "base": "home",
+  "category": "resource",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerTownHall": [
+    {
+      "townHallLevel": 1,
+      "count": 1
+    },
+    {
+      "townHallLevel": 2,
+      "count": 2
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 170,
+      "buildCostResource": "Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 2,
+        "seconds": 0
+      },
+      "capacity": 1610,
+      "townHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/gold-storage-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 960,
+      "buildCostResource": "Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 14,
+        "seconds": 0
+      },
+      "capacity": 5110,
+      "townHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/gold-storage-2.png"
+      }
+    }
+  ]
+}

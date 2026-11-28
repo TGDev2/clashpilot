@@ -478,7 +478,7 @@ def compiled(
     """The problem and objective of the stored plan `body`, as it was computed."""
     now = int(body["now"])
     carried = carried_jobs(body) if same_snapshot else {}
-    compiled, _ = compile_inputs(inputs, now, params.horizon_days, carried)
+    compiled, _ = compile_inputs(inputs, now, params.horizon_days, carried, base=params.base)
     problem, weights = with_strategy(compiled, params)
     return problem, weights
 

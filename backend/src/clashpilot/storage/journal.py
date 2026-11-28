@@ -1,10 +1,11 @@
-"""The journal of each village (migration `0007_journal.sql`)."""
+"""The journal of each village (migration `0007_journal.sql`), per base through its plans."""
 
 from __future__ import annotations
 
 import json
 import sqlite3
 
+from clashpilot.ingest.state import Village
 from clashpilot.planning.journal import JournalEntry
 from clashpilot.planning.service import canonical_json
 
@@ -35,13 +36,25 @@ def add_entry(
     return entry_id
 
 
-def entries(connection: sqlite3.Connection, village_id: str) -> tuple[JournalEntry, ...]:
-    """Every event of the village, oldest first."""
-    rows = connection.execute(
-        "SELECT entry_id, type, at, task_id, payload, plan_id FROM journal "
-        "WHERE village_id = ? ORDER BY at, entry_id",
-        (village_id,),
-    ).fetchall()
+def entries(
+    connection: sqlite3.Connection, village_id: str, base: Village | None = None
+) -> tuple[JournalEntry, ...]:
+    """Every event of the village, oldest first; with `base`, those of the plans of that base
+    (E32). An event whose plan is gone (`plan_id` null) belongs to the main village, as every
+    plan stored before the builder base."""
+    if base is None:
+        rows = connection.execute(
+            "SELECT entry_id, type, at, task_id, payload, plan_id FROM journal "
+            "WHERE village_id = ? ORDER BY at, entry_id",
+            (village_id,),
+        ).fetchall()
+    else:
+        rows = connection.execute(
+            "SELECT j.entry_id, j.type, j.at, j.task_id, j.payload, j.plan_id FROM journal j "
+            "LEFT JOIN plans p ON p.plan_id = j.plan_id "
+            "WHERE j.village_id = ? AND COALESCE(p.base, 'home') = ? ORDER BY j.at, j.entry_id",
+            (village_id, base),
+        ).fetchall()
     return tuple(
         JournalEntry(
             entry_id=row["entry_id"],

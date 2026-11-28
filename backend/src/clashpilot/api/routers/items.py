@@ -137,7 +137,7 @@ def _context(request: Request, village_id: str, payload: _Request) -> items.Cont
         resolved = resolve_params(None, payload.engine, payload.profile)
     except UnknownEngineError as error:
         raise ApiError(422, "unknown_engine", f"Moteur inconnu : {error.engine}.") from None
-    inputs, stored, same_snapshot = base_inputs(request, village_id)
+    inputs, stored, same_snapshot = base_inputs(request, village_id, "home")
     config = planner_config(request.app.state.settings.planner_overrides, resolved.profile)
     return items.Context(
         inputs=inputs,

@@ -136,7 +136,8 @@ def _forecast(request: Request, village_id: str, horizon_days: int) -> ForecastO
         if found is None:
             raise _village_not_found(village_id)
         snapshot_id, snapshot = found
-        stored = store.latest_plan(connection, village_id)
+        # The forecast stays on the main village (E32): its latest plan of base home.
+        stored = store.latest_plan(connection, village_id, "home")
         if stored is None:
             raise ApiError(404, "no_plan", f"Aucun plan n'a encore été calculé pour {village_id}.")
         pack = store.active_pack(connection)
@@ -147,7 +148,7 @@ def _forecast(request: Request, village_id: str, horizon_days: int) -> ForecastO
             manual=store.manual_state(connection, village_id),
             pack=pack,
             schedule_profile=store.schedule_profile(connection, village_id),
-            journal=journal_store.entries(connection, village_id),
+            journal=journal_store.entries(connection, village_id, "home"),
         )
     try:
         document = forecast_plan(

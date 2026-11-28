@@ -1,0 +1,50 @@
+{
+  "id": "wall",
+  "dataId": 7600006,
+  "name": "Muret d'essai",
+  "base": "home",
+  "category": "wall",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerTownHall": [
+    {
+      "townHallLevel": 1,
+      "count": 25
+    },
+    {
+      "townHallLevel": 2,
+      "count": 50
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 0,
+      "buildCostResource": "Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "townHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/wall-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 1050,
+      "buildCostResource": "Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "townHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/wall-2.png"
+      }
+    }
+  ]
+}

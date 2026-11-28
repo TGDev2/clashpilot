@@ -11,15 +11,25 @@ import json
 import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 SCHEMA_VERSION = 1
 INSTANT_UPGRADE_TAG = "instant_upgrade"
-COST_RESOURCES = frozenset(
-    {"gold", "elixir", "dark_elixir", "gems", "shiny_ore", "glowy_ore", "starry_ore"}
-)
+# The resources a level may cost; `builder_gold` and `builder_elixir` belong to the builder base.
+Resource = Literal[
+    "gold",
+    "elixir",
+    "dark_elixir",
+    "gems",
+    "shiny_ore",
+    "glowy_ore",
+    "starry_ore",
+    "builder_gold",
+    "builder_elixir",
+]
+COST_RESOURCES: frozenset[str] = frozenset(get_args(Resource))
 
 Lane = Literal["builder", "lab", "pet_house", "blacksmith", "none"]
 Kind = Literal[

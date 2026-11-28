@@ -145,7 +145,7 @@ def replan(
     config = planner_config(overrides, params.profile)
     carried = carried_jobs(previous.body) if previous.same_snapshot else {}
 
-    before, known = compile_inputs(inputs, now, params.horizon_days, carried)
+    before, known = compile_inputs(inputs, now, params.horizon_days, carried, base=params.base)
     base = default_objective(params)
     payload = _checked(event, before, known, inputs, previous, base)
     recorded = JournalEntry(
@@ -156,7 +156,7 @@ def replan(
         payload=payload,
     )
     after_inputs = dataclasses.replace(inputs, journal=(*inputs.journal, recorded))
-    compiled, _ = compile_inputs(after_inputs, now, params.horizon_days, carried)
+    compiled, _ = compile_inputs(after_inputs, now, params.horizon_days, carried, base=params.base)
     problem, _ = with_strategy(compiled, params)
     objective = objective_of(after_inputs.journal) or base
 

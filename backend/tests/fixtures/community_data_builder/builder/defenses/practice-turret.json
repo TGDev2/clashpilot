@@ -1,0 +1,69 @@
+{
+  "id": "practice-turret",
+  "dataId": 7700003,
+  "name": "Tourelle d'essai",
+  "base": "builder",
+  "category": "defense",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerBuilderHall": [
+    {
+      "builderHallLevel": 1,
+      "count": 0
+    },
+    {
+      "builderHallLevel": 2,
+      "count": 1
+    },
+    {
+      "builderHallLevel": 3,
+      "count": 3
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 310,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 1,
+        "seconds": 30
+      },
+      "builderHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/practice-turret-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 5200,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 1,
+        "hours": 2,
+        "minutes": 3,
+        "seconds": 4
+      },
+      "builderHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/practice-turret-2.png"
+      }
+    },
+    {
+      "level": 3,
+      "buildCost": 52000,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 2,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 3,
+      "images": {
+        "normal": "https://example.invalid/practice-turret-3.png"
+      }
+    }
+  ]
+}

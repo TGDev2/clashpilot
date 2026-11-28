@@ -1,4 +1,5 @@
-"""Stored plans (migrations `0006_plans.sql`, `0007_journal.sql`) and the inputs of a plan."""
+"""Stored plans (migrations `0006_plans.sql`, `0007_journal.sql`, `0010_plan_base.sql`) and the
+inputs of a plan."""
 
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ from typing import Any
 
 from clashpilot.gamedata.pack import GamePack
 from clashpilot.ingest.export import parse_export
-from clashpilot.ingest.state import ManualState, VillageSnapshot
+from clashpilot.ingest.state import ManualState, Village, VillageSnapshot
 from clashpilot.planning.service import PlanOutcome, PlanParams, canonical_json, trace_json
 from clashpilot.schedule.profile import ScheduleProfile
 from clashpilot.storage.packs import load_effective_pack
@@ -85,8 +86,8 @@ def save_plan(
     cursor = connection.execute(
         "INSERT INTO plans (village_id, created_at, now, input_hash, engine, profile, pack_id, "
         "proof, assignments, trace, warnings, params, body, explanations, reliability, "
-        "snapshot_id, previous_plan_id) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "snapshot_id, previous_plan_id, base) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             village_id,
             created_at,
@@ -105,6 +106,7 @@ def save_plan(
             canonical_json(outcome.reliability),
             snapshot_id,
             previous_plan_id,
+            outcome.params.base,
         ),
     )
     plan_id = cursor.lastrowid
@@ -142,16 +144,24 @@ def _stored(row: sqlite3.Row) -> StoredPlan:
     )
 
 
-def latest_plan(connection: sqlite3.Connection, village_id: str) -> StoredPlan | None:
+def latest_plan(
+    connection: sqlite3.Connection, village_id: str, base: Village = "home"
+) -> StoredPlan | None:
+    """The latest plan of the village `base` (E32): a builder base plan is never the home one."""
     row = connection.execute(
-        f"SELECT {_PLAN_COLUMNS} FROM plans WHERE village_id = ? ORDER BY plan_id DESC LIMIT 1",
-        (village_id,),
+        f"SELECT {_PLAN_COLUMNS} FROM plans WHERE village_id = ? AND base = ? "
+        "ORDER BY plan_id DESC LIMIT 1",
+        (village_id, base),
     ).fetchone()
     return _stored(row) if row is not None else None
 
 
-def plan_exists(connection: sqlite3.Connection, village_id: str, plan_id: int) -> bool:
+def plan_base(connection: sqlite3.Connection, village_id: str, plan_id: int) -> Village | None:
+    """The base of the plan `plan_id` of the village, or None when it has no such plan."""
     found = connection.execute(
-        "SELECT 1 FROM plans WHERE village_id = ? AND plan_id = ?", (village_id, plan_id)
+        "SELECT base FROM plans WHERE village_id = ? AND plan_id = ?", (village_id, plan_id)
     ).fetchone()
-    return found is not None
+    if found is None:
+        return None
+    base: Village = "builder" if found["base"] == "builder" else "home"
+    return base

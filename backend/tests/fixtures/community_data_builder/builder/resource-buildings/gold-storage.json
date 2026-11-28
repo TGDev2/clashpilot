@@ -1,0 +1,52 @@
+{
+  "id": "gold-storage",
+  "dataId": 7700005,
+  "name": "Besace d'essai",
+  "base": "builder",
+  "category": "resource",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerBuilderHall": [
+    {
+      "builderHallLevel": 1,
+      "count": 1
+    },
+    {
+      "builderHallLevel": 2,
+      "count": 2
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 330,
+      "buildCostResource": "Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 1,
+        "seconds": 0
+      },
+      "capacity": 81000,
+      "builderHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/gold-storage-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 6300,
+      "buildCostResource": "Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 30,
+        "seconds": 0
+      },
+      "capacity": 152000,
+      "builderHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/gold-storage-2.png"
+      }
+    }
+  ]
+}

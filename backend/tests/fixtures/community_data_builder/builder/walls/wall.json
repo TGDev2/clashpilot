@@ -1,0 +1,84 @@
+{
+  "id": "wall",
+  "dataId": 7700009,
+  "name": "Palissade d'essai",
+  "base": "builder",
+  "category": "wall",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerBuilderHall": [
+    {
+      "builderHallLevel": 1,
+      "count": 3
+    },
+    {
+      "builderHallLevel": 2,
+      "count": 5
+    },
+    {
+      "builderHallLevel": 3,
+      "count": 9
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 0,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/wall-1.png"
+      }
+    },
+    {
+      "level": 2,
+      "buildCost": 4100,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/wall-2.png"
+      }
+    },
+    {
+      "level": 3,
+      "buildCost": 12100,
+      "buildCostResource": "Builder Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 2,
+      "images": {
+        "normal": "https://example.invalid/wall-3.png"
+      }
+    },
+    {
+      "level": 4,
+      "buildCost": 51000,
+      "buildCostResource": "Builder Gold or Builder Elixir",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "builderHallRequired": 3,
+      "images": {
+        "normal": "https://example.invalid/wall-4.png"
+      }
+    }
+  ]
+}

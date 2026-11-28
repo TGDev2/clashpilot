@@ -1,0 +1,25 @@
+{
+  "id": "practice-scout",
+  "dataId": 7600005,
+  "name": "Éclaireur d'essai",
+  "base": "home",
+  "category": "troop",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "levels": [
+    {
+      "level": 2,
+      "researchCost": 260,
+      "researchCostResource": "Elixir",
+      "researchTime": {
+        "days": 0,
+        "hours": 2,
+        "minutes": 0,
+        "seconds": 0
+      },
+      "laboratoryRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/practice-scout-2.png"
+      }
+    }
+  ]
+}

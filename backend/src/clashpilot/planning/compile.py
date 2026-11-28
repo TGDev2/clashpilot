@@ -1,8 +1,11 @@
 """Compile a village into a planning problem (SPEC section 4, Compilation, rules 1 to 9).
 
-Pure: no I/O, no clock (`now` is a parameter). Only the home village is planned. An item whose lane
-is `none` gives no task, and a level without a pack row is never estimated (ADR-2): it is listed in
-`Problem.excluded` with the reason `missing_pack_row`.
+Pure: no I/O, no clock (`now` is a parameter). One village is planned at a time (ADR-BB1): `base`
+is `home` (the default) or `builder`, and the problem only holds the items, running jobs, storage,
+resources and typed events of that village, under the same lane names (`builder` = its builders,
+`lab` = its laboratory). An item whose lane is `none` gives no task, and a level without a pack
+row is never estimated (ADR-2): it is listed in `Problem.excluded` with the reason
+`missing_pack_row`.
 
 Two readings the SPEC leaves open:
 
@@ -30,7 +33,13 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
 from clashpilot.gamedata.pack import INSTANT_UPGRADE_TAG, GamePack, Item, LevelRow
-from clashpilot.ingest.state import ManualState, RunningJob, VillageSnapshot
+from clashpilot.ingest.state import (
+    RESOURCES_OF,
+    ManualState,
+    RunningJob,
+    Village,
+    VillageSnapshot,
+)
 from clashpilot.planning.model import (
     ExcludedTask,
     FrozenJob,
@@ -46,7 +55,8 @@ from clashpilot.schedule.profile import ScheduleProfile
 
 DAY_S = 86_400
 HOUR_S = 3_600
-HOME = "home"
+HOME: Village = "home"
+BUILDER_BASE: Village = "builder"
 TOWN_HALL_TAG = "town_hall"
 BUILDER_HUT_TAG = "builder_hut"
 # Lanes with one worker when the building that owns them stands in the village, with its tag.
@@ -142,18 +152,19 @@ class _Candidate:
 
 
 def _owned_instances(
-    snapshot: VillageSnapshot, pack: GamePack, now: int
+    snapshot: VillageSnapshot, pack: GamePack, now: int, base: Village = HOME
 ) -> dict[int, list[_Instance]]:
-    """Instances of each home item, ranked by level reached, running first, earliest end first."""
+    """Instances of each item of `base`, ranked by level reached, running first, earliest end
+    first."""
     levels: dict[int, list[int]] = defaultdict(list)
     for entry in snapshot.items:
         known = pack.item(entry.data_id)
-        if entry.village != HOME or entry.level is None or known is None or known.village != HOME:
+        if entry.village != base or entry.level is None or known is None or known.village != base:
             continue
         levels[entry.data_id] += [entry.level] * entry.count
     jobs: dict[int, list[RunningJob]] = defaultdict(list)
     for job in snapshot.running:
-        if job.village == HOME and job.data_id in levels:
+        if job.village == base and job.data_id in levels:
             jobs[job.data_id].append(job)
 
     owned: dict[int, list[_Instance]] = {}
@@ -188,12 +199,12 @@ def _count_at(item: Item, town_hall: int | None) -> int:
 
 
 def _unlocked_instances(
-    pack: GamePack, owned: Mapping[int, list[_Instance]], target: int | None
+    pack: GamePack, owned: Mapping[int, list[_Instance]], target: int | None, base: Village
 ) -> dict[int, list[_Instance]]:
     """Rule 3: the instances the target town hall allows beyond those owned, from level 0."""
     added: dict[int, list[_Instance]] = {}
     for item in pack.data.items:
-        if item.village != HOME or not item.max_count_by_th:
+        if item.village != base or not item.max_count_by_th:
             continue
         have = len(owned.get(item.data_id, []))
         allowed = _count_at(item, target)
@@ -207,10 +218,12 @@ def _unlocked_instances(
     return added
 
 
-def running_jobs(snapshot: VillageSnapshot, pack: GamePack, now: int) -> tuple[RunningRef, ...]:
+def running_jobs(
+    snapshot: VillageSnapshot, pack: GamePack, now: int, base: Village = HOME
+) -> tuple[RunningRef, ...]:
     """The jobs of the export still running at `now`, under the task ids `compile_problem` uses."""
     refs: list[RunningRef] = []
-    for data_id, instances in _owned_instances(snapshot, pack, now).items():
+    for data_id, instances in _owned_instances(snapshot, pack, now, base).items():
         item = pack.item(data_id)
         if item is None or item.lane == "none":
             continue
@@ -237,17 +250,22 @@ def _fits(instance: _Instance, to_level: int) -> bool:
     return instance.level == to_level - 1
 
 
-def _with_fact(instance: _Instance, fact: JobFact, to_level: int, now: int) -> _Instance:
+def _with_fact(
+    instance: _Instance, fact: JobFact, to_level: int, now: int, base: Village
+) -> _Instance:
     if fact.end <= now:
         return replace(instance, level=to_level, job=None, known=None)
     job = instance.job
     if job is None:
-        job = RunningJob(instance.data_id, fact.end, to_level, "journal", "home")
+        job = RunningJob(instance.data_id, fact.end, to_level, "journal", base)
     return replace(instance, level=to_level - 1, job=replace(job, finish_at=fact.end), known=fact)
 
 
 def _apply_jobs(
-    instances: Mapping[int, list[_Instance]], facts: Sequence[JobFact], now: int
+    instances: Mapping[int, list[_Instance]],
+    facts: Sequence[JobFact],
+    now: int,
+    base: Village = HOME,
 ) -> tuple[dict[int, list[_Instance]], list[JobFact]]:
     """Put each fact on its instance; return the instances and the facts that found none.
 
@@ -276,14 +294,14 @@ def _apply_jobs(
             k = position.get(index)
             if k is not None and _fits(found[k], to_level):
                 taken.add(k)
-                found[k] = _with_fact(found[k], fact, to_level, now)
+                found[k] = _with_fact(found[k], fact, to_level, now, base)
             else:
                 rest.append(fact)
         free = [
             k for k, instance in enumerate(found) if k not in taken and _fits(instance, to_level)
         ]
         for k, fact in zip(free, rest, strict=False):
-            found[k] = _with_fact(found[k], fact, to_level, now)
+            found[k] = _with_fact(found[k], fact, to_level, now, base)
         left.extend(rest[len(free) :])
     return out, left
 
@@ -335,11 +353,13 @@ def _top_level(pack: GamePack, data_id: int, needs: _TownHallNeeds, target: int 
 # --------------------------------------------------------------------------- lanes and storage
 
 
-def _lane_owners(pack: GamePack, town_hall_id: int | None) -> dict[str, set[int]]:
-    """Items owning each single lane: tagged as such, or required by the levels of that lane."""
+def _lane_owners(pack: GamePack, town_hall_id: int | None, base: Village) -> dict[str, set[int]]:
+    """Items of `base` owning each single lane: tagged as such, or required by the levels of that
+    lane."""
     owners: dict[str, set[int]] = {lane: set() for lane in SINGLE_LANES}
-    lane_of: dict[int, str] = {item.data_id: item.lane for item in pack.data.items}
-    for item in pack.data.items:
+    mine = [item for item in pack.data.items if item.village == base]
+    lane_of: dict[int, str] = {item.data_id: item.lane for item in mine}
+    for item in mine:
         for lane, tag in SINGLE_LANES.items():
             if tag in item.tags:
                 owners[lane].add(item.data_id)
@@ -357,7 +377,10 @@ def _lane_owners(pack: GamePack, town_hall_id: int | None) -> dict[str, set[int]
 
 
 def _caps(
-    pack: GamePack, owned: Mapping[int, list[_Instance]], manual: ManualState
+    pack: GamePack,
+    owned: Mapping[int, list[_Instance]],
+    manual: ManualState,
+    resources: frozenset[str],
 ) -> dict[str, int]:
     """Storage of the finished levels of the village, unless `storage_override` gives it."""
     capacity: dict[tuple[int, int], list[tuple[str, int]]] = defaultdict(list)
@@ -369,7 +392,8 @@ def _caps(
             for resource, amount in capacity.get((data_id, instance.level), []):
                 caps[resource] += amount
     for resource, amount in manual.storage_override.items():
-        caps[resource] = amount
+        if resource in resources:
+            caps[resource] = amount
     return dict(caps)
 
 
@@ -581,12 +605,18 @@ def _frozen_jobs(
 # --------------------------------------------------------------------------- resources (rule 7)
 
 
-def _observations(manual: ManualState, journal: JournalState) -> dict[str, tuple[int, int]]:
-    """The latest `(as_of, value)` of each resource; the journal wins a tie."""
+def _observations(
+    manual: ManualState, journal: JournalState, resources: frozenset[str]
+) -> dict[str, tuple[int, int]]:
+    """The latest `(as_of, value)` of each resource of the village; the journal wins a tie."""
     seen: dict[str, tuple[int, int]] = {
-        name: (typed.as_of, typed.value) for name, typed in manual.resources.items()
+        name: (typed.as_of, typed.value)
+        for name, typed in manual.resources.items()
+        if name in resources
     }
     for fact in sorted(journal.stock, key=lambda f: f.at):
+        if fact.resource not in resources:
+            continue
         if fact.resource not in seen or fact.at >= seen[fact.resource][0]:
             seen[fact.resource] = (fact.at, fact.value)
     return seen
@@ -598,11 +628,13 @@ def _resources(
     consumed: set[str],
     now: int,
     journal: JournalState,
+    resources: frozenset[str],
 ) -> ResourceModel:
-    observed = _observations(manual, journal)
+    observed = _observations(manual, journal, resources)
+    rated = {name for name in manual.farm_rate if name in resources}
     income = {
         name: manual.farm_rate[name].expected if name in manual.farm_rate else 0
-        for name in sorted(consumed | set(observed) | set(manual.farm_rate))
+        for name in sorted(consumed | set(observed) | rated)
     }
     payments = sorted(journal.payments, key=lambda p: p.at)
     initial: dict[str, int] = {}
@@ -627,6 +659,30 @@ def _accrue(level: int, rate: int, seconds: int, limit: int | None) -> int:
     return min(gained, limit) if limit is not None else gained
 
 
+# --------------------------------------------------------------------------- builders (rule 8)
+
+
+def builder_base_estimate(snapshot: VillageSnapshot, pack: GamePack) -> int:
+    """Builders of the builder base when none is typed in (ADR-BB4): the upgrades of the export
+    running at once on the builder lane of the builder village, at least 1.
+
+    The export is one instant, so every job it lists runs at once. A job of the extra worker and
+    an item the pack does not place in the builder village on the builder lane do not count.
+    """
+    running = 0
+    for job in snapshot.running:
+        item = pack.item(job.data_id)
+        if (
+            job.village == BUILDER_BASE
+            and not job.extra
+            and item is not None
+            and item.village == BUILDER_BASE
+            and item.lane == "builder"
+        ):
+            running += 1
+    return max(1, running)
+
+
 # --------------------------------------------------------------------------- entry point
 
 
@@ -640,18 +696,21 @@ def compile_problem(
     target_th: int | None = None,
     max_tasks: int = 400,
     journal: JournalState | None = None,
+    base: Village = HOME,
 ) -> Problem:
-    """The problem of planning the village of `snapshot` from `now` for `horizon_days` days.
+    """The problem of planning the village `base` of `snapshot` from `now` for `horizon_days`
+    days.
 
     `journal` is what happened since the export (E11): started jobs, stock observations and
     payments, already replayed.
     """
     journal = journal if journal is not None else JournalState()
-    exported = _owned_instances(snapshot, pack, now)
-    caps = _caps(pack, exported, manual)
-    owned, left = _apply_jobs(exported, journal.jobs, now)
+    resources = RESOURCES_OF[base]
+    exported = _owned_instances(snapshot, pack, now, base)
+    caps = _caps(pack, exported, manual, resources)
+    owned, left = _apply_jobs(exported, journal.jobs, now, base)
     town_hall = next(
-        (i for i in pack.data.items if TOWN_HALL_TAG in i.tags and i.village == HOME), None
+        (i for i in pack.data.items if TOWN_HALL_TAG in i.tags and i.village == base), None
     )
     town_hall_id = town_hall.data_id if town_hall is not None else None
 
@@ -668,21 +727,27 @@ def compile_problem(
 
     # Rules 2 to 5: instances, unlocks, prerequisites and exclusions.
     instances = {data_id: list(found) for data_id, found in owned.items()}
-    unlocked, _ = _apply_jobs(_unlocked_instances(pack, owned, target), left, now)
+    unlocked, _ = _apply_jobs(_unlocked_instances(pack, owned, target, base), left, now, base)
     for data_id, fresh in unlocked.items():
         instances.setdefault(data_id, []).extend(fresh)
     needs = _TownHallNeeds(pack, town_hall_id)
     candidates = _candidates(pack, instances, needs, target, town_hall_id, caps)
 
     # Rule 8 (builders) is needed by rule 6 for the slots of the frozen jobs.
-    huts = sum(
-        len(found)
-        for data_id, found in owned.items()
-        if (item := pack.item(data_id)) is not None and BUILDER_HUT_TAG in item.tags
-    )
-    builders = manual.builders_total if manual.builders_total is not None else huts or None
+    builders: int | None
+    if base == BUILDER_BASE:
+        builders = manual.builder_base_builders
+        if builders is None:
+            builders = builder_base_estimate(snapshot, pack)
+    else:
+        huts = sum(
+            len(found)
+            for data_id, found in owned.items()
+            if (item := pack.item(data_id)) is not None and BUILDER_HUT_TAG in item.tags
+        )
+        builders = manual.builders_total if manual.builders_total is not None else huts or None
     lanes: dict[str, int] = {"builder": builders or 0}
-    for lane, owners in _lane_owners(pack, town_hall_id).items():
+    for lane, owners in _lane_owners(pack, town_hall_id, base).items():
         if any(data_id in owned for data_id in owners):
             lanes[lane] = 1
 
@@ -692,7 +757,8 @@ def compile_problem(
 
     # Rules 7 and 8: resources and mandatory inputs.
     consumed = {name for task in tasks for name, amount in task.cost.items() if amount > 0}
-    known = set(manual.resources) | {fact.resource for fact in journal.stock}
+    known: set[str] = {name for name in manual.resources if name in resources}
+    known |= {fact.resource for fact in journal.stock if fact.resource in resources}
     missing = sorted(name for name in consumed if name not in known)
     if schedule_profile is None:
         missing.append("schedule_profile")
@@ -709,7 +775,7 @@ def compile_problem(
         lanes=lanes,
         tasks=tuple(tasks),
         frozen=tuple(frozen),
-        resources=_resources(manual, caps, consumed, now, journal),
+        resources=_resources(manual, caps, consumed, now, journal, resources),
         calendar=expand_windows(schedule_profile, now, horizon_end),
         policy=Policy(
             mode=rules.mode,
@@ -718,7 +784,9 @@ def compile_problem(
         ),
         # No pack rule describes the gold pass yet, so `manual.gold_pass` adds no modifier.
         modifiers=tuple(
-            Modifier(e.start, e.end, e.lane, e.duration_pct, e.cost_pct) for e in manual.events
+            Modifier(e.start, e.end, e.lane, e.duration_pct, e.cost_pct)
+            for e in manual.events
+            if e.base == base
         ),
         excluded=tuple(excluded),
     )

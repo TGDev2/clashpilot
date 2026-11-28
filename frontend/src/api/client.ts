@@ -30,18 +30,35 @@ export type SchedulePreview = {
 };
 
 type PlanRequest = components["schemas"]["PlanRequest"];
-/** The boolean options of `POST .../plans` that default to false on the server. */
-type PlanFlags = "critical_path" | "composition_first";
+/** The options of `POST .../plans` that take a server default: false, and the home village. */
+type PlanFlags = "critical_path" | "composition_first" | "base";
 /**
  * A `POST .../plans` body. The server gives `critical_path` and `composition_first` their default
- * (false) when they are left out, although the generated type marks them required:
- * openapi-typescript drops the `?` of any field with a default.
+ * (false) and `base` the home village when they are left out, although the generated type marks
+ * them required: openapi-typescript drops the `?` of any field with a default.
  */
 export type PlanBody = Omit<PlanRequest, PlanFlags> & Partial<Pick<PlanRequest, PlanFlags>>;
 
 /** `body` as the typed client expects it; the fields left out take their server defaults. */
 export function planBody(body: PlanBody): PlanRequest {
   return body as PlanRequest;
+}
+
+type ManualRequest = NonNullable<
+  paths["/api/villages/{village_id}/manual"]["put"]["requestBody"]
+>["content"]["application/json"];
+type ManualEvent = components["schemas"]["ManualEvent"];
+/**
+ * A `PUT .../manual` body. The server gives an event without `base` the home village, although
+ * the generated type marks `base` required (a field with a default, as in `PlanBody`).
+ */
+export type ManualBody = Omit<ManualRequest, "events"> & {
+  events?: (Omit<ManualEvent, "base"> & Partial<Pick<ManualEvent, "base">>)[];
+};
+
+/** `body` as the typed client expects it; an event left without `base` is the home village's. */
+export function manualBody(body: ManualBody): ManualRequest {
+  return body as ManualRequest;
 }
 
 let client: ReturnType<typeof createClient<paths>> | undefined;

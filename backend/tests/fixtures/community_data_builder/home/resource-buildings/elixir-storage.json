@@ -1,0 +1,32 @@
+{
+  "id": "elixir-storage",
+  "dataId": 7600004,
+  "name": "Fiole d'essai",
+  "base": "home",
+  "category": "resource",
+  "description": "DESCRIPTION-SENTINEL fictional text that must never reach a pack",
+  "availablePerTownHall": [
+    {
+      "townHallLevel": 1,
+      "count": 1
+    }
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "buildCost": 180,
+      "buildCostResource": "Gold",
+      "buildTime": {
+        "days": 0,
+        "hours": 0,
+        "minutes": 2,
+        "seconds": 0
+      },
+      "capacity": 1710,
+      "townHallRequired": 1,
+      "images": {
+        "normal": "https://example.invalid/elixir-storage-1.png"
+      }
+    }
+  ]
+}
