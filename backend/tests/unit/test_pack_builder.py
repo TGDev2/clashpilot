@@ -145,6 +145,37 @@ def test_a_file_that_is_not_json_is_noted(tmp_path: Path) -> None:
     assert skipped[0]["file"] == "home/defenses/broken.json"
 
 
+@pytest.mark.parametrize("time", [None, "instant", {"days": 0, "hours": -1}])
+def test_a_builder_wall_without_a_readable_time_is_not_assumed_instant(
+    tmp_path: Path, time: Any
+) -> None:
+    level = gold_level(2, buildCostResource="Builder Gold", buildTime=time)
+    (tmp_path / "home").mkdir()
+    write(tmp_path, "builder/walls/wall.json", source(7, [level]))
+
+    pack, skipped = build(tmp_path)
+
+    assert pack["levels"] == []
+    assert reasons(skipped) == {(7, 2): "missing_time"}
+
+
+@pytest.mark.parametrize(("village", "resource"), [("home", "Builder Gold"), ("builder", "Gold")])
+def test_a_village_reads_only_its_own_resource_names(
+    tmp_path: Path, village: str, resource: str
+) -> None:
+    (tmp_path / "home").mkdir()
+    write(
+        tmp_path,
+        f"{village}/defenses/odd.json",
+        source(7, [gold_level(1, buildCostResource=resource)]),
+    )
+
+    pack, skipped = build(tmp_path)
+
+    assert pack["levels"] == []
+    assert reasons(skipped) == {(7, 1): "unknown_resource"}
+
+
 def test_a_folder_without_home_is_refused(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError, match="home"):
         build_pack_from_dir(tmp_path, "unit-pack", "v", "2026-01-01", "2026-01-02")

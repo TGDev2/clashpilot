@@ -26,7 +26,6 @@ from clashpilot.gamedata.pack import (
     load_pack,
 )
 
-HOME = "home"
 SOURCE_ID = "s1"
 _SOURCE_LABEL = "chiefpansancolt/clash-of-clans-data"
 _SOURCE_URL = "https://github.com/chiefpansancolt/clash-of-clans-data"
@@ -35,53 +34,110 @@ _SOURCE_LICENSE = "MIT"
 
 @dataclass(frozen=True)
 class _Folder:
+    """`instant`: the upgrades of the folder may last 0 s and are tagged accordingly."""
+
     kind: Kind
     lane: Lane
+    instant: bool = False
+
+
+@dataclass(frozen=True)
+class _Village:
+    """How one village folder of the dataset is read. File stems repeat between villages."""
+
+    name: str
+    folders: Mapping[str, _Folder]
+    # (folder, file stem) -> tag of the item.
+    tags: Mapping[tuple[str, str], str]
+    # Level field -> stem of the file holding the prerequisite building.
+    prerequisites: Mapping[str, str]
+    # Resource name in the dataset -> pack resource.
+    resources: Mapping[str, str]
+    # File stem of a storage building -> resource its `capacity` field holds.
+    storage_files: Mapping[str, str]
+    # Key of a `storageCapacity` object -> pack resource.
+    storage_capacities: Mapping[str, str]
+    # Item field listing the allowed copies, and the hall level key of its entries.
+    available_field: str
+    hall_level_field: str
 
 
 _EQUIPMENT_FOLDER = "hero-equipment"
-_FOLDERS: dict[str, _Folder] = {
-    "army-buildings": _Folder("building", "builder"),
-    "crafted-defenses": _Folder("building", "builder"),
-    "defenses": _Folder("building", "builder"),
-    "guardians": _Folder("guardian", "builder"),
-    _EQUIPMENT_FOLDER: _Folder("equipment", "blacksmith"),
-    "heroes": _Folder("hero", "builder"),
-    "other": _Folder("building", "builder"),
-    "pets": _Folder("pet", "pet_house"),
-    "resource-buildings": _Folder("building", "builder"),
-    "siege-machines": _Folder("siege", "lab"),
-    "spells": _Folder("spell", "lab"),
-    "town-hall": _Folder("building", "builder"),
-    "traps": _Folder("trap", "builder"),
-    "troops": _Folder("troop", "lab"),
-    "walls": _Folder("wall", "builder"),
-}
 
-_TAGS = {("town-hall", "town-hall"): "town_hall", ("defenses", "builders-hut"): "builder_hut"}
+_HOME = _Village(
+    name="home",
+    folders={
+        "army-buildings": _Folder("building", "builder"),
+        "crafted-defenses": _Folder("building", "builder"),
+        "defenses": _Folder("building", "builder"),
+        "guardians": _Folder("guardian", "builder"),
+        _EQUIPMENT_FOLDER: _Folder("equipment", "blacksmith", instant=True),
+        "heroes": _Folder("hero", "builder"),
+        "other": _Folder("building", "builder"),
+        "pets": _Folder("pet", "pet_house"),
+        "resource-buildings": _Folder("building", "builder"),
+        "siege-machines": _Folder("siege", "lab"),
+        "spells": _Folder("spell", "lab"),
+        "town-hall": _Folder("building", "builder"),
+        "traps": _Folder("trap", "builder"),
+        "troops": _Folder("troop", "lab"),
+        "walls": _Folder("wall", "builder"),
+    },
+    tags={("town-hall", "town-hall"): "town_hall", ("defenses", "builders-hut"): "builder_hut"},
+    prerequisites={
+        "townHallRequired": "town-hall",
+        "laboratoryRequired": "laboratory",
+        "heroHallLevelRequired": "hero-hall",
+        "blacksmithLevelRequired": "blacksmith",
+        "petHouseLevelRequired": "pet-house",
+    },
+    resources={"Gold": "gold", "Elixir": "elixir", "Dark Elixir": "dark_elixir", "Gems": "gems"},
+    storage_files={
+        "gold-storage": "gold",
+        "elixir-storage": "elixir",
+        "dark-elixir-storage": "dark_elixir",
+    },
+    storage_capacities={"gold": "gold", "elixir": "elixir", "darkElixir": "dark_elixir"},
+    available_field="availablePerTownHall",
+    hall_level_field="townHallLevel",
+)
 
-# Level field -> stem of the file holding the prerequisite building.
-_PREREQUISITES = {
-    "townHallRequired": "town-hall",
-    "laboratoryRequired": "laboratory",
-    "heroHallLevelRequired": "hero-hall",
-    "blacksmithLevelRequired": "blacksmith",
-    "petHouseLevelRequired": "pet-house",
-}
+# The builder hall carries the tag `town_hall` in its own village. `leagues` holds no item.
+_BUILDER_BASE = _Village(
+    name="builder",
+    folders={
+        "army-buildings": _Folder("building", "builder"),
+        "builder-hall": _Folder("building", "builder"),
+        "defenses": _Folder("building", "builder"),
+        "heroes": _Folder("hero", "builder"),
+        "other": _Folder("building", "builder"),
+        "resource-buildings": _Folder("building", "builder"),
+        "traps": _Folder("trap", "builder"),
+        "troops": _Folder("troop", "lab"),
+        "walls": _Folder("wall", "builder", instant=True),
+    },
+    tags={
+        ("builder-hall", "builder-hall"): "town_hall",
+        ("army-buildings", "star-laboratory"): "laboratory",
+    },
+    prerequisites={
+        "builderHallRequired": "builder-hall",
+        "builderHallLevelRequired": "builder-hall",
+        "starLabRequired": "star-laboratory",
+    },
+    resources={"Builder Gold": "builder_gold", "Builder Elixir": "builder_elixir"},
+    storage_files={"gold-storage": "builder_gold", "elixir-storage": "builder_elixir"},
+    storage_capacities={},
+    available_field="availablePerBuilderHall",
+    hall_level_field="builderHallLevel",
+)
 
 _COST_PREFIXES = ("build", "research", "upgrade")
-_RESOURCES = {"Gold": "gold", "Elixir": "elixir", "Dark Elixir": "dark_elixir", "Gems": "gems"}
 _ORES = {
     "upgradeShinyOre": "shiny_ore",
     "upgradeGlowingOre": "glowy_ore",
     "upgradeStarryOre": "starry_ore",
 }
-_STORAGE_FILES = {
-    "gold-storage": "gold",
-    "elixir-storage": "elixir",
-    "dark-elixir-storage": "dark_elixir",
-}
-_STORAGE_CAPACITIES = {"gold": "gold", "elixir": "elixir", "darkElixir": "dark_elixir"}
 _SECONDS_PER_UNIT = {"days": 86400, "hours": 3600, "minutes": 60, "seconds": 1}
 
 
@@ -101,6 +157,7 @@ class _Unreadable(Exception):
 @dataclass(frozen=True)
 class _SourceFile:
     relative: str
+    village: _Village
     folder: str
     stem: str
     data_id: int
@@ -114,7 +171,7 @@ def _positive_int(value: Any) -> int | None:
 
 
 def _duration_s(value: Any) -> int | None:
-    """Seconds of a `{days, hours, minutes, seconds}` object; None if unreadable or zero."""
+    """Seconds of a `{days, hours, minutes, seconds}` object; None if unreadable."""
     if not isinstance(value, Mapping):
         return None
     total = 0
@@ -123,7 +180,7 @@ def _duration_s(value: Any) -> int | None:
         if amount and _positive_int(amount) is None:
             return None
         total += amount * seconds
-    return total or None
+    return total
 
 
 def _ore_cost(level: Mapping[str, Any]) -> dict[str, int]:
@@ -132,7 +189,7 @@ def _ore_cost(level: Mapping[str, Any]) -> dict[str, int]:
 
 
 def _upgrade(file: _SourceFile, level: Mapping[str, Any]) -> tuple[int, dict[str, int]]:
-    """Duration and cost of a level, or `_Unreadable`. Only equipment may last 0 s (SPEC 5)."""
+    """Duration and cost of a level, or `_Unreadable`. Only an instant folder may last 0 s."""
     if file.folder == _EQUIPMENT_FOLDER:
         cost = _ore_cost(level)
         if not cost:
@@ -148,18 +205,21 @@ def _upgrade(file: _SourceFile, level: Mapping[str, Any]) -> tuple[int, dict[str
     if amount is None:
         raise _Unreadable("missing_cost")
     resource_name = level.get(f"{prefix}CostResource")
-    resource = _RESOURCES.get(resource_name) if isinstance(resource_name, str) else None
+    resources = file.village.resources
+    resource = resources.get(resource_name) if isinstance(resource_name, str) else None
     if resource is None:
         raise _Unreadable("unknown_resource")
     duration = _duration_s(level.get(f"{prefix}Time"))
-    if duration is None:
+    if duration is None or (duration == 0 and not file.village.folders[file.folder].instant):
         raise _Unreadable("missing_time")
     return duration, {resource: amount}
 
 
-def _requires(level: Mapping[str, Any], building_ids: Mapping[str, int]) -> list[dict[str, int]]:
+def _requires(
+    file: _SourceFile, level: Mapping[str, Any], building_ids: Mapping[str, int]
+) -> list[dict[str, int]]:
     requires: list[dict[str, int]] = []
-    for field, stem in _PREREQUISITES.items():
+    for field, stem in file.village.prerequisites.items():
         value = level.get(field)
         if value is None or value == 0:
             continue
@@ -174,7 +234,7 @@ def _requires(level: Mapping[str, Any], building_ids: Mapping[str, int]) -> list
 
 
 def _capacities(file: _SourceFile, level: Mapping[str, Any]) -> dict[str, int]:
-    resource = _STORAGE_FILES.get(file.stem)
+    resource = file.village.storage_files.get(file.stem)
     if resource is not None:
         capacity = _positive_int(level.get("capacity"))
         if capacity is None:
@@ -183,38 +243,41 @@ def _capacities(file: _SourceFile, level: Mapping[str, Any]) -> dict[str, int]:
     declared = level.get("storageCapacity")
     if not isinstance(declared, Mapping):
         return {}
-    amounts = {res: _positive_int(declared.get(key)) for key, res in _STORAGE_CAPACITIES.items()}
+    capacities = file.village.storage_capacities
+    amounts = {res: _positive_int(declared.get(key)) for key, res in capacities.items()}
     return {res: amount for res, amount in amounts.items() if amount is not None}
 
 
-def _max_count_by_th(content: Mapping[str, Any]) -> dict[str, int]:
-    available = content.get("availablePerTownHall")
+def _max_count_by_th(file: _SourceFile) -> dict[str, int]:
+    """Copies allowed by level of the village's hall (the builder hall in the builder base)."""
+    available = file.content.get(file.village.available_field)
     counts: dict[str, int] = {}
     for entry in available if isinstance(available, list) else []:
         if not isinstance(entry, Mapping):
             continue
-        town_hall = _positive_int(entry.get("townHallLevel"))
+        hall = _positive_int(entry.get(file.village.hall_level_field))
         count = _positive_int(entry.get("count"))
-        if town_hall is not None and count is not None:
-            counts[str(town_hall)] = count
+        if hall is not None and count is not None:
+            counts[str(hall)] = count
     return counts
 
 
 def _item(file: _SourceFile) -> dict[str, Any]:
-    folder = _FOLDERS[file.folder]
-    tags = [tag for key, tag in _TAGS.items() if key == (file.folder, file.stem)]
-    if file.folder == _EQUIPMENT_FOLDER:
+    folder = file.village.folders[file.folder]
+    tag = file.village.tags.get((file.folder, file.stem))
+    tags = [] if tag is None else [tag]
+    if folder.instant:
         tags.append(INSTANT_UPGRADE_TAG)
     category = file.content.get("category")
     return {
         "data_id": file.data_id,
         "name": file.name,
         "kind": folder.kind,
-        "village": HOME,
+        "village": file.village.name,
         "lane": folder.lane,
         "category": category if isinstance(category, str) and category else file.folder,
         "tags": tags,
-        "max_count_by_th": _max_count_by_th(file.content),
+        "max_count_by_th": _max_count_by_th(file),
     }
 
 
@@ -233,13 +296,15 @@ def _read_json(path: Path) -> Any:
         return None
 
 
-def _read_files(home: Path, skipped: list[SkippedEntry]) -> list[_SourceFile]:
+def _read_files(
+    root: Path, village: _Village, seen: set[int], skipped: list[SkippedEntry]
+) -> list[_SourceFile]:
+    """The item files of one village folder; `seen` holds the data ids of the whole pack."""
     files: list[_SourceFile] = []
-    seen: set[int] = set()
-    for path in sorted(p for p in home.rglob("*.json") if p.is_file()):
-        relative = path.relative_to(home.parent).as_posix()
-        folder = path.relative_to(home).parts[0]
-        if folder not in _FOLDERS:
+    for path in sorted(p for p in root.rglob("*.json") if p.is_file()):
+        relative = path.relative_to(root.parent).as_posix()
+        folder = path.relative_to(root).parts[0]
+        if folder not in village.folders:
             skipped.append(_note_file(relative, "unknown_folder"))
             continue
         content = _read_json(path)
@@ -251,7 +316,7 @@ def _read_files(home: Path, skipped: list[SkippedEntry]) -> list[_SourceFile]:
             skipped.append(_note_file(relative, "duplicate_data_id"))
         else:
             seen.add(data_id)
-            files.append(_SourceFile(relative, folder, path.stem, data_id, name, content))
+            files.append(_SourceFile(relative, village, folder, path.stem, data_id, name, content))
     return files
 
 
@@ -275,7 +340,7 @@ def _read_levels(
         seen.add(number)
         try:
             duration, cost = _upgrade(file, raw)
-            requires = _requires(raw, building_ids)
+            requires = _requires(file, raw, building_ids)
         except _Unreadable as unreadable:
             skipped.append(_skip(file, number, str(unreadable)))
         else:
@@ -312,23 +377,27 @@ def build_pack_from_dir(
 ) -> tuple[dict[str, Any], list[SkippedEntry]]:
     """Return the pack read from the dataset's `data/` folder and the list of what was left out.
 
+    The `home` folder is required, the `builder` one (builder base) is read when it is there.
     Raises `FileNotFoundError` if `path` has no `home` folder.
     """
-    home = Path(path) / HOME
-    if not home.is_dir():
-        raise FileNotFoundError(f"no {HOME} folder in dataset directory: {path}")
+    data = Path(path)
+    if not (data / _HOME.name).is_dir():
+        raise FileNotFoundError(f"no {_HOME.name} folder in dataset directory: {path}")
 
     skipped: list[SkippedEntry] = []
-    files = _read_files(home, skipped)
-    prerequisites = set(_PREREQUISITES.values())
-    building_ids = {file.stem: file.data_id for file in files if file.stem in prerequisites}
-
+    seen: set[int] = set()
+    files: list[_SourceFile] = []
     levels: list[dict[str, Any]] = []
     storage: list[dict[str, Any]] = []
-    for file in files:
-        file_levels, file_storage = _read_levels(file, building_ids, skipped)
-        levels += file_levels
-        storage += file_storage
+    for village in (_HOME, _BUILDER_BASE):
+        village_files = _read_files(data / village.name, village, seen, skipped)
+        stems = set(village.prerequisites.values())
+        building_ids = {file.stem: file.data_id for file in village_files if file.stem in stems}
+        for file in village_files:
+            file_levels, file_storage = _read_levels(file, building_ids, skipped)
+            levels += file_levels
+            storage += file_storage
+        files += village_files
 
     pack = {
         "schema_version": SCHEMA_VERSION,
